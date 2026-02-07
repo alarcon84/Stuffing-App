@@ -1,0 +1,19 @@
+{
+    "name": "stuffing-calc-monorepo",
+    "private": true,
+    "packageManager": "npm@11.6.2",
+    "scripts": {
+        "build": "turbo run build",
+        "dev": "turbo run dev",
+        "test": "turbo run test",
+        "lint": "turbo run lint",
+        "electron": "npm run electron --workspace=apps/desktop"
+    },
+    "devDependencies": {
+        "turbo": "latest"
+    },
+    "workspaces": [
+        "apps/*",
+        "packages/*"
+    ]
+}

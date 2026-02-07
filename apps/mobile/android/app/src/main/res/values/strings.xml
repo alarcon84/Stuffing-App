@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Stuffing Calculator</string>
+    <string name="title_activity_main">Stuffing Calculator</string>
+    <string name="package_name">com.jorge.stuffingcalc</string>
+    <string name="custom_url_scheme">com.jorge.stuffingcalc</string>
+</resources>
