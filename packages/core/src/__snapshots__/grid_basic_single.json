@@ -1,0 +1,54 @@
+{
+  "loads": [
+    {
+      "id": 1,
+      "items": [
+        {
+          "position": [
+            520,
+            520,
+            520
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1000,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        }
+      ],
+      "itemCount": 1,
+      "utilization": 3.0124178737890204,
+      "type": "partial"
+    }
+  ],
+  "totalItems": 1,
+  "totalContainers": 1,
+  "unpackedItems": 0,
+  "containerDimensions": {
+    "length": 5898,
+    "width": 2352,
+    "height": 2393
+  },
+  "errors": [],
+  "actualUsedVolume": 1000000000,
+  "packedBoxDimensions": {
+    "length": 1000,
+    "width": 1000,
+    "height": 1000
+  },
+  "totalPallets": 0,
+  "totalLots": 0
+}

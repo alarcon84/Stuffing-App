@@ -48,14 +48,15 @@ function App() {
   const handleCalculate = useCallback((
     container: Container,
     materials: Material[],
-    combined: boolean,
+    packingMode: import('@stuffing-calc/core').PackingMode,
     margins?: { length: number; width: number; height: number },
+    enableTopUp?: boolean,
     enableFullMix?: boolean
   ) => {
     setCurrentContainer(container);
     setCurrentMaterials(materials);
 
-    const result = calculatePacking(container, materials, combined, margins, enableFullMix);
+    const result = calculatePacking(container, materials, false, margins, packingMode, enableTopUp, enableFullMix);
     console.log('Calculation result:', result);
     setPackingResult(result);
   }, []);
@@ -79,7 +80,7 @@ function App() {
         [tempMat],
         false,
         { length: 20, width: 20, height: 20 },
-        false
+        'SEQUENTIAL'
       );
 
       // Find the item count of the first load (which should be full)

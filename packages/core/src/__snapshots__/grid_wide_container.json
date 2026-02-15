@@ -1,0 +1,2537 @@
+{
+  "loads": [
+    {
+      "id": 1,
+      "items": [
+        {
+          "position": [
+            520,
+            520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            520,
+            520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            520,
+            1520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            520,
+            1520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            1520,
+            520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            1520,
+            520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            1520,
+            1520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            1520,
+            1520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            2520,
+            520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            2520,
+            520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            2520,
+            1520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            2520,
+            1520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            3520,
+            520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            3520,
+            520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            3520,
+            1520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            3520,
+            1520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            4520,
+            520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            4520,
+            520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            4520,
+            1520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            4520,
+            1520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            5520,
+            520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            5520,
+            520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            5520,
+            1520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            5520,
+            1520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            6520,
+            520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            6520,
+            520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            6520,
+            1520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            6520,
+            1520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            7520,
+            520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            7520,
+            520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            7520,
+            1520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            7520,
+            1520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            8520,
+            520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            8520,
+            520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            8520,
+            1520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            8520,
+            1520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            9520,
+            520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            9520,
+            520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            9520,
+            1520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            9520,
+            1520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            10520,
+            520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            10520,
+            520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            10520,
+            1520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            10520,
+            1520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            11520,
+            520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            11520,
+            520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            11520,
+            1520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            11520,
+            1520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            12520,
+            520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            12520,
+            520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            12520,
+            1520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            12520,
+            1520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            13520,
+            520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            13520,
+            520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            13520,
+            1520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            13520,
+            1520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            14520,
+            520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            14520,
+            520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            14520,
+            1520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            14520,
+            1520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        }
+      ],
+      "itemCount": 60,
+      "utilization": 66.66666666666666,
+      "type": "full"
+    },
+    {
+      "id": 2,
+      "items": [
+        {
+          "position": [
+            520,
+            520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            520,
+            520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            520,
+            1520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            520,
+            1520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            1520,
+            520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            1520,
+            520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            1520,
+            1520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            1520,
+            1520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            2520,
+            520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            2520,
+            520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            2520,
+            1520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            2520,
+            1520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            3520,
+            520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            3520,
+            520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            3520,
+            1520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            3520,
+            1520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            4520,
+            520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            4520,
+            520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            4520,
+            1520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            4520,
+            1520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            5520,
+            520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            5520,
+            520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            5520,
+            1520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            5520,
+            1520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            6520,
+            520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            6520,
+            520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            6520,
+            1520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            6520,
+            1520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            7520,
+            520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            7520,
+            520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            7520,
+            1520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            7520,
+            1520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            8520,
+            520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            8520,
+            520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            8520,
+            1520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            8520,
+            1520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            9520,
+            520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            9520,
+            520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            9520,
+            1520,
+            620
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        },
+        {
+          "position": [
+            9520,
+            1520,
+            1820
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1000,
+            "width": 1200,
+            "height": 1000
+          },
+          "type": "box",
+          "itemCount": 1,
+          "materialId": 1,
+          "grid": {
+            "cols": 1,
+            "rows": 1,
+            "layers": 1
+          }
+        }
+      ],
+      "itemCount": 40,
+      "utilization": 44.44444444444444,
+      "type": "partial"
+    }
+  ],
+  "totalItems": 100,
+  "totalContainers": 2,
+  "unpackedItems": 0,
+  "containerDimensions": {
+    "length": 16000,
+    "width": 2500,
+    "height": 2700
+  },
+  "errors": [],
+  "actualUsedVolume": 120000000000,
+  "packedBoxDimensions": {
+    "length": 1000,
+    "width": 1200,
+    "height": 1000
+  },
+  "totalPallets": 0,
+  "totalLots": 0
+}

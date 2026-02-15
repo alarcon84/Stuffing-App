@@ -1,0 +1,419 @@
+[1mdiff --git a/packages/core/src/packingAlgorithm.ts b/packages/core/src/packingAlgorithm.ts[m
+[1mindex d1af3e2..e5cd2fc 100644[m
+[1m--- a/packages/core/src/packingAlgorithm.ts[m
+[1m+++ b/packages/core/src/packingAlgorithm.ts[m
+[36m@@ -1,1291 +1,1291 @@[m
+[31m-import type { Box, Container, PackingResult, Pallet, PlacedItem, Dimensions, ContainerLoad } from './types';[m
+[31m-import {[m
+[31m-    PALLET_BASE_HEIGHT_MM,[m
+[31m-    MIN_USABLE_STRIP_WIDTH_MM,[m
+[31m-    LAYER_GROUPING_TOLERANCE_MM,[m
+[31m-    PALLET_POSITION_TOLERANCE_MM,[m
+[31m-    DEFAULT_MARGIN_MM,[m
+[31m-    MAX_PALLET_STACK_HEIGHT,[m
+[31m-    GROUND_SHELF_TOLERANCE_MM[m
+[31m-} from './constants';[m
+[31m-import { deepClone, parseLayerConfig } from './utils';[m
+[31m-[m
+[31m-[m
+[31m-interface PackingScenarioResult {[m
+[31m-    loads: ContainerLoad[];[m
+[31m-    totalItems: number;[m
+[31m-    totalContainers: number;[m
+[31m-    unpackedItems: number;[m
+[31m-    packedBoxDimensions?: Dimensions;[m
+[31m-    errors: string[];[m
+[31m-    actualUsedVolume?: number;[m
+[31m-}[m
+[31m-[m
+[31m-/**[m
+[31m- * ARCHITECTURAL FIX: SURFACE DETECTION SYSTEM[m
+[31m- * Adjusted to find horizontal ground space[m
+[31m- */[m
+[31m-interface Shelf {[m
+[31m-    startX: number;[m
+[31m-    endX: number;[m
+[31m-    y: number; // The height of this shelf[m
+[31m-    z?: number; // Start Z position (for side strips)[m
+[31m-    width: number; // Available Z-width[m
+[31m-    type: 'gap' | 'peak' | 'ground_horizontal' | 'side_strip';[m
+[31m-}[m
+[31m-[m
+[31m-const findAvailableShelves = ([m
+[31m-    load: ContainerLoad,[m
+[31m-    containerDims: Dimensions,[m
+[31m-    margins: { length?: number; width?: number; height?: number },[m
+[31m-    enableFullMix: boolean[m
+[31m-): Shelf[] => {[m
+[31m-    const marginL = margins.length ?? DEFAULT_MARGIN_MM;[m
+[31m-    const marginH = margins.height ?? DEFAULT_MARGIN_MM;[m
+[31m-    const marginW = margins.width ?? DEFAULT_MARGIN_MM;[m
+[31m-[m
+[31m-    // Flatten items into a simplified 2D profile (X vs MaxY)[m
+[31m-    const sortedItems = [...load.items].sort((a, b) => a.position[0] - b.position[0]);[m
+[31m-[m
+[31m-    // If empty, whole floor is available[m
+[31m-    if (sortedItems.length === 0) {[m
+[31m-        return [{[m
+[31m-            startX: marginL,[m
+[31m-            endX: containerDims.length - marginL,[m
+[31m-            y: marginH,[m
+[31m-            width: containerDims.width - marginW * 2,[m
+[31m-            type: 'ground_horizontal'[m
+[31m-        }];[m
+[31m-    }[m
+[31m-[m
+[31m-    // Detect Global Max X (Rightmost edge of the load)[m
+[31m-    let absoluteMaxX = 0;[m
+[31m-[m
+[31m-    // Group items by their approximate top Y (tolerance 5mm) to find vertical shelves[m
+[31m-    // Store a LIST of supported segments for each height, to handle gaps[m
+[31m-    const layers = new Map<number, { minX: number, maxX: number, minZ: number, maxZ: number }[]>();[m
+[31m-[m
+[31m-    sortedItems.forEach(item => {[m
+[31m-        const top = item.position[1] + item.dimensions.height / 2;[m
+[31m-        const right = item.position[0] + item.dimensions.length / 2;[m
+[31m-[m
+[31m-        if (right > absoluteMaxX) absoluteMaxX = right;[m
+[31m-[m
+[31m-        // Round to nearest 10mm to group effectively[m
+[31m-        const roundedTop = Math.round(top / LAYER_GROUPING_TOLERANCE_MM) * LAYER_GROUPING_TOLERANCE_MM;[m
+[31m-[m
+[31m-        const itemMinX = item.position[0] - item.dimensions.length / 2;[m
+[31m-        const itemMaxX = item.position[0] + item.dimensions.length / 2;[m
+[31m-        const itemMinZ = item.position[2] - item.dimensions.width / 2;[m
+[31m-        const itemMaxZ = item.position[2] + item.dimensions.width / 2;[m
+[31m-[m
+[31m-        if (!layers.has(roundedTop)) {[m
+[31m-            layers.set(roundedTop, [{ minX: itemMinX, maxX: itemMaxX, minZ: itemMinZ, maxZ: itemMaxZ }]);[m
+[31m-        } else {[m
+[31m-            const segments = layers.get(roundedTop)!;[m
+[31m-            let merged = false;[m
+[31m-[m
+[31m-            // Try to merge with existing segments if they overlap or touch[m
+[31m-            for (const segment of segments) {[m
+[31m-                // Check for overlap/touch in X and Z[m
+[31m-                const xOverlap = (itemMinX <= segment.maxX + 1) && (itemMaxX >= segment.minX - 1);[m
+[31m-                const zOverlap = (itemMinZ <= segment.maxZ + 1) && (itemMaxZ >= segment.minZ - 1);[m
+[31m-[m
+[31m-                if (xOverlap && zOverlap) {[m
+[31m-                    segment.minX = Math.min(segment.minX, itemMinX);[m
+[31m-                    segment.maxX = Math.max(segment.maxX, itemMaxX);[m
+[31m-                    segment.minZ = Math.min(segment.minZ, itemMinZ);[m
+[31m-                    segment.maxZ = Math.max(segment.maxZ, itemMaxZ);[m
+[31m-                    merged = true;[m
+[31m-                    break;[m
+[31m-                }[m
+[31m-            }[m
+[31m-[m
+[31m-            if (!merged) {[m
+[31m-                segments.push({ minX: itemMinX, maxX: itemMaxX, minZ: itemMinZ, maxZ: itemMaxZ });[m
+[31m-            }[m
+[31m-        }[m
+[31m-    });[m
+[31m-[m
+[31m-    const shelves: Shelf[] = [];[m
+[31m-[m
+[31m-    // 1. Horizontal Ground Shelf (The space AFTER the last item)[m
+[31m-    if (absoluteMaxX < containerDims.length - marginL - GROUND_SHELF_TOLERANCE_MM) {[m
+[31m-        shelves.push({[m
+[31m-            startX: absoluteMaxX,[m
+[31m-            endX: containerDims.length - marginL,[m
+[31m-            y: marginH, // Start at ground (plus margin)[m
+[31m-            width: containerDims.width - marginW * 2,[m
+[31m-            type: 'ground_horizontal'[m
+[31m-        });[m
+[31m-    }[m
+[31m-[m
+[31m-    // 1b. Internal Ground Gaps (Space BEFORE the last item)[m
+[31m-    // Scan for significant gaps between items on the ground level[m
+[31m-    if (sortedItems.length > 0) {[m
+[31m-        // Sort by minX[m
+[31m-        const xSorted = [...sortedItems].sort((a, b) => (a.position[0] - a.dimensions.length / 2) - (b.position[0] - b.dimensions.length / 2));[m
+[31m-[m
+[31m-        let currentX = marginL;[m
+[31m-        for (const item of xSorted) {[m
+[31m-            const itemLeft = item.position[0] - item.dimensions.length / 2;[m
+[31m-            const itemRight = item.position[0] + item.dimensions.length / 2;[m
+[31m-[m
+[31m-            // Check if there is a gap before this item[m
+[31m-            if (itemLeft > currentX + GROUND_SHELF_TOLERANCE_MM) {[m
+[31m-                // Found a gap![m
+[31m-                shelves.push({[m
+[31m-                    startX: currentX,[m
+[31m-                    endX: itemLeft,[m
+[31m-                    y: marginH,[m
+[31m-                    width: containerDims.width - marginW * 2,[m
+[31m-                    type: 'ground_horizontal' // Treat as ground shelf[m
+[31m-                });[m
+[31m-            }[m
+[31m-[m
+[31m-            // Advance currentX if this item extends further[m
+[31m-            if (itemRight > currentX) {[m
+[31m-                currentX = itemRight;[m
+[31m-            }[m
+[31m-        }[m
+[31m-    }[m
+[31m-[m
+[31m-    // 2. Vertical Shelves (Peak & Gaps)[m
+[31m-    const sortedLayers = Array.from(layers.entries()).sort((a, b) => b[0] - a[0]); // Descending Height[m
+[31m-[m
+[31m-    // 3. Side Strip Detection (Z-axis gap)[m
+[31m-    // Find the maximum Z used by any item in the load[m
+[31m-    let maxZ = 0;[m
+[31m-    load.items.forEach(item => {[m
+[31m-        const front = item.position[2] + item.dimensions.width / 2;[m
+[31m-        if (front > maxZ) maxZ = front;[m
+[31m-    });[m
+[31m-[m
+[31m-    if (load.items.length === 0) maxZ = marginW;[m
+[31m-[m
+[31m-    const remainingWidth = containerDims.width - marginW - maxZ;[m
+[31m-    const minUsableWidth = MIN_USABLE_STRIP_WIDTH_MM;[m
+[31m-[m
+[31m-    if (remainingWidth > minUsableWidth) {[m
+[31m-        shelves.push({[m
+[31m-            startX: marginL,[m
+[31m-            endX: containerDims.length - marginL,[m
+[31m-            y: marginH,[m
+[31m-            z: maxZ, // Start after the existing load[m
+[31m-            width: remainingWidth,[m
+[31m-            type: 'side_strip'[m
+[31m-        });[m
+[31m-    }[m
+[31m-[m
+[31m-    if (enableFullMix && sortedLayers.length > 0) {[m
+[31m-        // Process highest layer (Peak)[m
+[31m-        const [peakY, peakSegments] = sortedLayers[0];[m
+[31m-[m
+[31m-        for (const segment of peakSegments) {[m
+[31m-            shelves.push({[m
+[31m-                startX: segment.minX, // FIX: Use actual segment start, not margin[m
+[31m-                endX: segment.maxX,[m
+[31m-                y: peakY,[m
+[31m-                z: segment.minZ,[m
+[31m-                width: segment.maxZ - segment.minZ,[m
+[31m-                type: 'peak'[m
+[31m-            });[m
+[31m-        }[m
+[31m-[m
+[31m-        // Process second highest layer (Gap)[m
+[31m-        if (sortedLayers.length > 1) {[m
+[31m-            const [lowerY, lowerSegments] = sortedLayers[1];[m
+[31m-[m
+[31m-            // For each lower segment, check if it extends beyond ANY peak segment[m
+[31m-            for (const lowerSeg of lowerSegments) {[m
+[31m-                // Find if this lower segment is "covered" by any peak segment[m
+[31m-                // Simplified: Just check if it extends further in X than the peak segments in roughly same Z range[m
+[31m-[m
+[31m-                // Find matching peak segments (overlapping in Z)[m
+[31m-                const coveringPeaks = peakSegments.filter(p =>[m
+[31m-                    (p.minZ <= lowerSeg.maxZ) && (p.maxZ >= lowerSeg.minZ)[m
+[31m-                );[m
+[31m-[m
+[31m-                if (coveringPeaks.length === 0) {[m
+[31m-                    // Not covered at all -> Full gap shelf[m
+[31m-                    shelves.push({[m
+[31m-                        startX: lowerSeg.minX, // FIX: Use actual segment start[m
+[31m-                        endX: lowerSeg.maxX,[m
+[31m-                        y: lowerY,[m
+[31m-                        z: lowerSeg.minZ,[m
+[31m-                        width: lowerSeg.maxZ - lowerSeg.minZ,[m
+[31m-                        type: 'gap'[m
+[31m-                    });[m
+[31m-                } else {[m
+[31m-                    // Partially covered? [m
+[31m-                    // For simplicity, if it extends significantly further in X, create a gap shelf starting from max peak X[m
+[31m-                    const maxPeakX = Math.max(...coveringPeaks.map(p => p.maxX));[m
+[31m-[m
+[31m-                    if (maxPeakX < lowerSeg.maxX) {[m
+[31m-                        shelves.push({[m
+[31m-                            startX: maxPeakX,[m
+[31m-                            endX: lowerSeg.maxX,[m
+[31m-                            y: lowerY,[m
+[31m-                            z: lowerSeg.minZ,[m
+[31m-                            width: lowerSeg.maxZ - lowerSeg.minZ,[m
+[31m-                            type: 'gap'[m
+[31m-                        });[m
+[31m-                    }[m
+[31m-                }[m
+[31m-            }[m
+[31m-        }[m
+[31m-    }[m
+[31m-[m
+[31m-[m
+[31m-    return shelves;[m
+[31m-};[m
+[31m-[m
+[31m-[m
+[31m-// Helper to pack a single material into a container (or remaining space)[m
+[31m-const packMaterial = ([m
+[31m-    boxInput: Box,[m
+[31m-    container: Container,[m
+[31m-    pallet: Pallet,[m
+[31m-    quantity: number,[m
+[31m-    layerConfig: string,[m
+[31m-    materialId: number,[m
+[31m-    startOffset: number = 0, // Offset in Length (x-axis)[m
+[31m-    existingLoad: ContainerLoad | null = null, // If appending to an existing load[m
+[31m-    margins: { length?: number; width?: number; height?: number } = { length: 20, width: 20, height: 20 },[m
+[31m-    maxSt: boolean = false,[m
+[31m-    baseY: number = 0, // Starting Y position (for stacking on top of other materials)[m
+[31m-    baseZ: number = 0, // Starting Z position (for side strips)[m
+[31m-    allowNewContainers: boolean = true, // Whether to create new containers if overflow[m
+[31m-    maxLen?: number // Optional: Maximum length available for this packing operation[m
+[31m-): PackingScenarioResult => {[m
+[31m-    // 1. Enforce State Immutability (Deep Clone)[m
+[31m-    const box = deepClone(boxInput);[m
+[31m-    // 1. Validate inputs[m
+[31m-    if ([m
+[31m-        box.dimensions.length <= 0 || box.dimensions.width <= 0 || box.dimensions.height <= 0 ||[m
+[31m-        container.dimensions.length <= 0 || container.dimensions.width <= 0 || container.dimensions.height <= 0 ||[m
+[31m-        (pallet.usePallet && (pallet.dimensions.length <= 0 || pallet.dimensions.width <= 0 || pallet.maxLoadHeight <= 0))[m
+[31m-    ) {[m
+[31m-        return {[m
+[31m-            loads: [],[m
+[31m-            totalItems: 0,[m
+[31m-            totalContainers: 0,[m
+[31m-            unpackedItems: quantity,[m
+[31m-            errors: [][m
+[31m-        };[m
+[31m-    }[m
+[31m-[m
+[31m-    const marginL = margins.length ?? DEFAULT_MARGIN_MM;[m
+[31m-    const marginW = margins.width ?? DEFAULT_MARGIN_MM;[m
+[31m-    const marginH = margins.height ?? DEFAULT_MARGIN_MM;[m
+[31m-[m
+[31m-    const contW = container.dimensions.width - marginW * 2 - baseZ;[m
+[31m-    const contH = container.dimensions.height - marginH * 2 - baseY;[m
+[31m-[m
+[31m-    let effectiveContainerLength = (container.dimensions.length - marginL * 2) - startOffset;[m
+[31m-    if (maxLen !== undefined) {[m
+[31m-        effectiveContainerLength = Math.min(effectiveContainerLength, maxLen);[m
+[31m-    }[m
+[31m-[m
+[31m-    if (effectiveContainerLength <= 0) {[m
+[31m-        return {[m
+[31m-            loads: [],[m
+[31m-            totalItems: 0,[m
+[31m-            totalContainers: 0,[m
+[31m-            unpackedItems: quantity,[m
+[31m-            errors: [][m
+[31m-        };[m
+[31m-    }[m
+[31m-[m
+[31m-    // 2. Determine the unit to pack (Box or Loaded Pallet)[m
+[31m-    let bestResult: PackingScenarioResult | null = null;[m
+[31m-    let maxItemsPacked = -1;[m
+[31m-    let bestUsedVolume = -1;[m
+[31m-    const errors: string[] = [];[m
+[31m-[m
+[31m-    const orientations: { dims: Dimensions, type: 'x' | 'y' | 'z' }[] = [];[m
+[31m-[m
+[31m-    // Generate all 6 permutations[m
+[31m-    const allPermutations: Dimensions[] = [[m
+[31m-        { length: box.dimensions.length, width: box.dimensions.width, height: box.dimensions.height },[m
+[31m-        { length: box.dimensions.length, width: box.dimensions.height, height: box.dimensions.width },[m
+[31m-        { length: box.dimensions.width, width: box.dimensions.length, height: box.dimensions.height },[m
+[31m-        { length: box.dimensions.width, width: box.dimensions.height, height: box.dimensions.length },[m
+[31m-        { length: box.dimensions.height, width: box.dimensions.length, height: box.dimensions.width },[m
+[31m-        { length: box.dimensions.height, width: box.dimensions.width, height: box.dimensions.length }[m
+[31m-    ];[m
+[31m-[m
+[31m-    // Count how many rotations are selected[m
+[31m-    const rotationCount = (box.allowedRotations.x ? 1 : 0) + (box.allowedRotations.y ? 1 : 0) + (box.allowedRotations.z ? 1 : 0);[m
+[31m-    const allowAll = rotationCount === 0;[m
+[31m-[m
+[31m-    // Add permutations based on selected rotations (or all if none selected)[m
+[31m-    // y (Horizontal): Height = Original Height (indices 0, 2)[m
+[31m-    if (allowAll || box.allowedRotations.y) {[m
+[31m-        orientations.push({ dims: allPermutations[0], type: 'y' });[m
+[31m-        orientations.push({ dims: allPermutations[2], type: 'y' });[m
+[31m-    }[m
+[31m-[m
+[31m-    // x (Vertical): Height = Original Length (indices 3, 5)[m
+[31m-    if (allowAll || box.allowedRotations.x) {[m
+[31m-        orientations.push({ dims: allPermutations[3], type: 'x' });[m
+[31m-        orientations.push({ dims: allPermutations[5], type: 'x' });[m
+[31m-    }[m
+[31m-[m
+[31m-    // z (Flat): Height = Original Width (indices 1, 4)[m
+[31m-    if (allowAll || box.allowedRotations.z) {[m
+[31m-        orientations.push({ dims: allPermutations[1], type: 'z' });[m
+[31m-        orientations.push({ dims: allPermutations[4], type: 'z' });[m
+[31m-    }[m
+[31m-[m
+[31m-    if (orientations.length === 0) {[m
+[31m-        orientations.push({ dims: { length: box.dimensions.length, width: box.dimensions.width, height: box.dimensions.height }, type: 'y' });[m
+[31m-    }[m
+[31m-[m
+[31m-    // RESTORED ORIGINAL ORIENTATION LOGIC[m
+[31m-    for (const orientation of orientations) {[m
+[31m-        const currentBoxDims = orientation.dims;[m
+[31m-        let unitDimensions: Dimensions;[m
+[31m-        let unitType: 'box' | 'pallet';[m
+[31m-        let itemsPerUnit = 1;[m
+[31m-[m
+[31m-        if (pallet.usePallet) {[m
+[31m-            unitType = 'pallet';[m
+[31m-[m
+[31m-            let cols: number;[m
+[31m-            let rows: number;[m
+[31m-            let layers: number;[m
+[31m-[m
+[31m-            const parsedConfig = parseLayerConfig(layerConfig);[m
+[31m-[m
+[31m-            if (parsedConfig) {[m
+[31m-                const { horizontal, vertical } = parsedConfig;[m
+[31m-                // FIX: Validate items per layer[m
+[31m-                const maxPhysicalItemsPerLayer = Math.floor(pallet.dimensions.length / currentBoxDims.length) * Math.floor(pallet.dimensions.width / currentBoxDims.width);[m
+[31m-[m
+[31m-                if (horizontal > maxPhysicalItemsPerLayer) {[m
+[31m-                    errors.push(`Mat ${materialId}: Layer config items (${horizontal}) exceeds physical limit (${maxPhysicalItemsPerLayer}). Clamped.`);[m
+[31m-                    cols = maxPhysicalItemsPerLayer;[m
+[31m-                } else {[m
+[31m-                    cols = horizontal;[m
+[31m-                }[m
+[31m-                rows = 1;[m
+[31m-[m
+[31m-                // FIX: Validate vertical layers[m
+[31m-                const palletBaseHeight = PALLET_BASE_HEIGHT_MM;[m
+[31m-                const availableHeight = pallet.maxLoadHeight - palletBaseHeight;[m
+[31m-                const maxPossibleLayers = Math.floor(availableHeight / currentBoxDims.height);[m
+[31m-[m
+[31m-                if (vertical > maxPossibleLayers) {[m
+[31m-                    layers = maxPossibleLayers;[m
+[31m-                } else {[m
+[31m-                    layers = vertical;[m
+[31m-                }[m
+[31m-            } else {[m
+[31m-                cols = Math.floor(pallet.dimensions.length / currentBoxDims.length);[m
+[31m-                rows = Math.floor(pallet.dimensions.width / currentBoxDims.width);[m
+[31m-                const palletBaseHeight = PALLET_BASE_HEIGHT_MM;[m
+[31m-                const availableHeight = pallet.maxLoadHeight - palletBaseHeight;[m
+[31m-                layers = Math.floor(availableHeight / currentBoxDims.height);[m
+[31m-            }[m
+[31m-[m
+[31m-            const palletBaseHeight = PALLET_BASE_HEIGHT_MM;[m
+[31m-            const actualUnitHeight = palletBaseHeight + (layers * currentBoxDims.height);[m
+[31m-            const effectiveUnitHeight = actualUnitHeight;[m
+[31m-[m
+[31m-            if (cols > 0 && rows > 0 && layers > 0) {[m
+[31m-                itemsPerUnit = cols * rows * layers; // Single pallet items[m
+[31m-                unitDimensions = {[m
+[31m-                    length: pallet.dimensions.length,[m
+[31m-                    width: pallet.dimensions.width,[m
+[31m-                    height: effectiveUnitHeight[m
+[31m-                };[m
+[31m-            } else {[m
+[31m-                continue;[m
+[31m-            }[m
+[31m-[m
+[31m-        } else {[m
+[31m-            unitType = 'box';[m
+[31m-            const parsedConfig = parseLayerConfig(layerConfig);[m
+[31m-[m
+[31m-            if (parsedConfig) {[m
+[31m-                const { horizontal, vertical } = parsedConfig;[m
+[31m-                // Calculate max possible items in this orientation[m
+[31m-                const maxHorizontal = Math

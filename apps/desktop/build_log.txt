@@ -1,0 +1,34 @@
+
+> stuffing-calculator@0.1.0 build
+> tsc -b && vite build
+
+[36mvite v7.3.1 [32mbuilding client environment for production...[36m[39m
+transforming...
+[32m✓[39m 2253 modules transformed.
+[31m✗[39m Build failed in 3.24s
+[31merror during build:
+[31m../../packages/core/src/index.ts (1:9): "calculatePacking" is not exported by "../../packages/core/src/packingAlgorithm.js", imported by "../../packages/core/src/index.ts".[31m
+file: [36mE:/Antigravity/Stuffing Calculator/packages/core/src/index.ts:1:9[31m
+[33m
+1: export { calculatePacking } from './packingAlgorithm';
+            ^
+2: export { packGridCore, type GridVolume } from './packGridCore';
+3: export * from './types';
+[31m
+    at getRollupError (file:///E:/Antigravity/Stuffing%20Calculator/node_modules/rollup/dist/es/shared/parseAst.js:401:41)
+    at error (file:///E:/Antigravity/Stuffing%20Calculator/node_modules/rollup/dist/es/shared/parseAst.js:397:42)
+    at Module.error (file:///E:/Antigravity/Stuffing%20Calculator/node_modules/rollup/dist/es/shared/node-entry.js:17022:16)
+    at Module.getVariableForExportName (file:///E:/Antigravity/Stuffing%20Calculator/node_modules/rollup/dist/es/shared/node-entry.js:17188:29)
+    at getVariableForExportNameRecursive (file:///E:/Antigravity/Stuffing%20Calculator/node_modules/rollup/dist/es/shared/node-entry.js:16839:19)
+    at Module.traceVariable (file:///E:/Antigravity/Stuffing%20Calculator/node_modules/rollup/dist/es/shared/node-entry.js:17476:44)
+    at ModuleScope.findVariable (file:///E:/Antigravity/Stuffing%20Calculator/node_modules/rollup/dist/es/shared/node-entry.js:15141:39)
+    at ReturnValueScope.findVariable (file:///E:/Antigravity/Stuffing%20Calculator/node_modules/rollup/dist/es/shared/node-entry.js:5688:38)
+    at FunctionBodyScope.findVariable (file:///E:/Antigravity/Stuffing%20Calculator/node_modules/rollup/dist/es/shared/node-entry.js:5688:38)
+    at ReturnValueScope.findVariable (file:///E:/Antigravity/Stuffing%20Calculator/node_modules/rollup/dist/es/shared/node-entry.js:5688:38)[39m
+npm error Lifecycle script `build` failed with error:
+npm error code 1
+npm error path E:\Antigravity\Stuffing Calculator\apps\desktop
+npm error workspace stuffing-calculator@0.1.0
+npm error location E:\Antigravity\Stuffing Calculator\apps\desktop
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c tsc -b && vite build

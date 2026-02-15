@@ -1,12 +1,18 @@
 {
     "name": "@stuffing-calc/core",
-    "version": "0.0.0",
+    "version": "0.0.1",
     "main": "./src/index.ts",
     "types": "./src/index.ts",
     "scripts": {
-        "lint": "eslint ."
+        "lint": "eslint .",
+        "test": "npx tsx src/test_packGridCore_verification.ts && npx tsx src/test_packGridRegression.ts && npx tsx src/test_orientationSelector.ts && npx tsx src/test_mixedDeterminism.ts && npx tsx src/test_single_material_guard.ts && npx tsx src/test_quantity_governor.ts && npx tsx src/test_sequential_mixed.ts && npx tsx src/test_smart_stack.ts"
+    },
+    "dependencies": {
+        "uuid": "^11.0.5"
     },
     "devDependencies": {
-        "typescript": "^5.0.0"
+        "@types/uuid": "^10.0.0",
+        "typescript": "^5.0.0",
+        "vitest": "^4.0.18"
     }
 }

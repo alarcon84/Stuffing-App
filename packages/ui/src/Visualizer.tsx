@@ -182,7 +182,7 @@ const Boxes: React.FC<{ items: PlacedItem[]; containerDims: any; offset: [number
                 } else {
                     // Legacy fallback
                     const normalizedConfig = layerConfig?.toLowerCase().replace(/[*×]/g, 'x') || '';
-                    if (normalizedConfig && normalizedConfig.includes('x') && box) {
+                    if (normalizedConfig && normalizedConfig.includes('x') && box && !item.isFlatTopOff) {
                         const parts = normalizedConfig.split('x');
                         const horizontal = parseInt(parts[0], 10) || 0;
                         const vertical = parseInt(parts[1], 10) || 0;
@@ -342,7 +342,8 @@ const Boxes: React.FC<{ items: PlacedItem[]; containerDims: any; offset: [number
     );
 };
 
-export const Visualizer: React.FC<VisualizerProps> = ({ result, container, box, pallet, layerConfig, box2, pallet2, layerConfig2, materials, onToggleFullscreen, isFullscreen }) => {
+// Optimization: Use React.memo for the entire component
+export const Visualizer = React.memo<VisualizerProps>(({ result, container, box, pallet, layerConfig, box2, pallet2, layerConfig2, materials, onToggleFullscreen, isFullscreen }) => {
     const [isMobile, setIsMobile] = React.useState(window.innerWidth < 768);
     const [viewMode, setViewMode] = React.useState<'linear' | 'parallel' | 'grid'>('linear');
 
@@ -359,9 +360,41 @@ export const Visualizer: React.FC<VisualizerProps> = ({ result, container, box, 
     }, []);
     // Debug logs
     console.log('Visualizer rendering. Result:', result);
-    if (result) {
-        console.log('Loads:', result.loads.length);
-        result.loads.forEach(l => console.log(`Load ${l.id}: ${l.items.length} items`));
+
+    // Memoize loads to prevent unnecessary Canvas recreation (CRITICAL FIX)
+    const stableLoads = useMemo(() => {
+        if (!result?.loads) return [];
+        return result.loads.filter(
+            (load) => load && load.items && Array.isArray(load.items) && load.items.length > 0
+        );
+    }, [result]);
+
+    // GUARD 1: No result at all
+    if (!result) {
+        return (
+            <div className="h-full w-full bg-gray-900 relative flex items-center justify-center">
+                <div className="text-gray-500 text-lg font-medium">Click "Calculate" to see packing visualization</div>
+
+                {/* Keep fullscreen button if needed */}
+                {onToggleFullscreen && (
+                    <button
+                        onClick={onToggleFullscreen}
+                        className="absolute top-4 right-4 bg-white/10 backdrop-blur p-2 rounded-lg text-white hover:bg-white/20 transition-colors z-10"
+                    >
+                        {isFullscreen ? <X className="w-6 h-6" /> : <Maximize className="w-6 h-6" />}
+                    </button>
+                )}
+            </div>
+        );
+    }
+
+    // GUARD 2: Result exists but no loads
+    if (!result.loads || result.loads.length === 0 || stableLoads.length === 0) {
+        return (
+            <div className="h-full w-full bg-gray-900 relative flex items-center justify-center">
+                <div className="text-gray-500 text-lg font-medium">No containers to display</div>
+            </div>
+        );
     }
 
     // Calculate spacing between containers
@@ -388,132 +421,138 @@ export const Visualizer: React.FC<VisualizerProps> = ({ result, container, box, 
             >
                 Cntr View: {viewMode.charAt(0).toUpperCase() + viewMode.slice(1)}
             </button>
-            <Canvas camera={{ position: [10, 10, 10], fov: 50 }}>
+
+            <Canvas
+                key="main-canvas" // Stable key to prevent recreation
+                camera={{ position: [10, 10, 10], fov: 50 }}
+                dpr={[1, 2]} // Optimize pixel ratio
+                gl={{
+                    preserveDrawingBuffer: true,
+                    powerPreference: 'high-performance',
+                    antialias: true
+                }}
+            >
                 <ambientLight intensity={0.6} />
                 <directionalLight position={[10, 20, 10]} intensity={1.2} castShadow />
                 <OrbitControls makeDefault />
 
                 <Center>
-                    {result ? (
-                        result.loads.map((load, index) => {
-                            let xOffset = 0;
-                            let zOffset = 0;
+                    {stableLoads.map((load, index) => {
+                        let xOffset = 0;
+                        let zOffset = 0;
 
-                            if (viewMode === 'linear') {
-                                xOffset = index * spacing;
-                            } else if (viewMode === 'parallel') {
-                                zOffset = index * (container.dimensions.width * 0.001 + 2); // Width + 2m gap
-                            } else if (viewMode === 'grid') {
-                                const cols = Math.ceil(Math.sqrt(result.loads.length));
-                                const row = Math.floor(index / cols);
-                                const col = index % cols;
-                                xOffset = col * spacing;
-                                zOffset = row * (container.dimensions.width * 0.001 + 2);
-                            }
+                        if (viewMode === 'linear') {
+                            xOffset = index * spacing;
+                        } else if (viewMode === 'parallel') {
+                            zOffset = index * (container.dimensions.width * 0.001 + 2); // Width + 2m gap
+                        } else if (viewMode === 'grid') {
+                            const cols = Math.ceil(Math.sqrt(stableLoads.length));
+                            const row = Math.floor(index / cols);
+                            const col = index % cols;
+                            xOffset = col * spacing;
+                            zOffset = row * (container.dimensions.width * 0.001 + 2);
+                        }
 
-                            // Group items by materialId
-                            const itemsByMaterial = new Map<number, PlacedItem[]>();
-                            load.items.forEach(item => {
-                                const mid = item.materialId || 1;
-                                if (!itemsByMaterial.has(mid)) itemsByMaterial.set(mid, []);
-                                itemsByMaterial.get(mid)!.push(item);
-                            });
+                        // Group items by materialId
+                        const itemsByMaterial = new Map<number, PlacedItem[]>();
+                        load.items.forEach(item => {
+                            const mid = item.materialId || 1;
+                            if (!itemsByMaterial.has(mid)) itemsByMaterial.set(mid, []);
+                            itemsByMaterial.get(mid)!.push(item);
+                        });
 
-                            return (
-                                <group key={`${load.id}-${load.items.length}`}>
-                                    <ContainerView
-                                        container={container}
-                                        position={[xOffset, 0, zOffset]}
-                                    />
+                        return (
+                            <group key={`${load.id}`}> {/* Stable key based on load ID */}
+                                <ContainerView
+                                    container={container}
+                                    position={[xOffset, 0, zOffset]}
+                                />
 
-                                    {Array.from(itemsByMaterial.entries()).map(([mid, items]) => {
-                                        // Find material data
-                                        let matBox: Box | null = null;
-                                        let matPallet: Pallet | null = null;
-                                        let matConfig: string = '';
+                                {Array.from(itemsByMaterial.entries()).map(([mid, items]) => {
+                                    // Find material data
+                                    let matBox: Box | null = null;
+                                    let matPallet: Pallet | null = null;
+                                    let matConfig: string = '';
 
-                                        if (materials) {
-                                            const m = materials.find(mat => mat.id === mid);
-                                            if (m) {
-                                                matBox = m.box;
-                                                matPallet = m.pallet;
-                                                matConfig = m.layerConfig;
-                                            }
+                                    if (materials) {
+                                        const m = materials.find(mat => mat.id === mid);
+                                        if (m) {
+                                            matBox = m.box;
+                                            matPallet = m.pallet;
+                                            matConfig = m.layerConfig;
                                         }
+                                    }
 
-                                        // Fallback to legacy props if materials not provided or not found (for mid 1 and 2)
-                                        if (!matBox) {
-                                            if (mid === 1) {
-                                                matBox = box || null;
-                                                matPallet = pallet || null;
-                                                matConfig = layerConfig || '';
-                                            } else if (mid === 2) {
-                                                matBox = box2 || null;
-                                                matPallet = pallet2 || null;
-                                                matConfig = layerConfig2 || '';
-                                            }
+                                    // Fallback to legacy props
+                                    if (!matBox) {
+                                        if (mid === 1) {
+                                            matBox = box || null;
+                                            matPallet = pallet || null;
+                                            matConfig = layerConfig || '';
+                                        } else if (mid === 2) {
+                                            matBox = box2 || null;
+                                            matPallet = pallet2 || null;
+                                            matConfig = layerConfig2 || '';
                                         }
+                                    }
 
-                                        if (!matBox) return null;
+                                    if (!matBox) return null;
 
-                                        const normalItems = items.filter(i => !i.isFlatTopOff);
-                                        const topOffItems = items.filter(i => i.isFlatTopOff);
+                                    const normalItems = items.filter(i => !i.isFlatTopOff);
+                                    const topOffItems = items.filter(i => i.isFlatTopOff);
 
-                                        const getLighterColor = (hex: string) => {
-                                            try {
-                                                const c = new THREE.Color(hex);
-                                                c.offsetHSL(0, 0, 0.3);
-                                                return '#' + c.getHexString();
-                                            } catch (e) {
-                                                return hex;
-                                            }
-                                        };
+                                    const getLighterColor = (hex: string) => {
+                                        try {
+                                            const c = new THREE.Color(hex);
+                                            c.offsetHSL(0, 0, 0.3);
+                                            return '#' + c.getHexString();
+                                        } catch (e) {
+                                            return hex;
+                                        }
+                                    };
 
-                                        return (
-                                            <React.Fragment key={mid}>
-                                                {normalItems.length > 0 && (
-                                                    <Boxes
-                                                        key={`${mid}-normal`}
-                                                        items={normalItems}
-                                                        containerDims={container.dimensions}
-                                                        offset={[xOffset, 0, 0]}
-                                                        box={matBox}
-                                                        pallet={matPallet}
-                                                        layerConfig={matConfig}
-                                                        color={matBox.color}
-                                                    />
-                                                )}
-                                                {topOffItems.length > 0 && (
-                                                    <Boxes
-                                                        key={`${mid}-topoff`}
-                                                        items={topOffItems}
-                                                        containerDims={container.dimensions}
-                                                        offset={[xOffset, 0, 0]}
-                                                        box={matBox}
-                                                        pallet={matPallet}
-                                                        layerConfig={matConfig}
-                                                        color={getLighterColor(matBox.color)}
-                                                    />
-                                                )}
-                                            </React.Fragment>
-                                        );
-                                    })}
+                                    return (
+                                        <React.Fragment key={mid}>
+                                            {normalItems.length > 0 && (
+                                                <Boxes
+                                                    key={`${mid}-normal`}
+                                                    items={normalItems}
+                                                    containerDims={container.dimensions}
+                                                    offset={[xOffset, 0, zOffset]}
+                                                    box={matBox}
+                                                    pallet={matPallet}
+                                                    layerConfig={matConfig}
+                                                    color={matBox.color}
+                                                />
+                                            )}
+                                            {topOffItems.length > 0 && (
+                                                <Boxes
+                                                    key={`${mid}-topoff`}
+                                                    items={topOffItems}
+                                                    containerDims={container.dimensions}
+                                                    offset={[xOffset, 0, zOffset]}
+                                                    box={matBox}
+                                                    pallet={matPallet}
+                                                    layerConfig={matConfig}
+                                                    color={getLighterColor(matBox.color)}
+                                                />
+                                            )}
+                                        </React.Fragment>
+                                    );
+                                })}
 
-                                    <Text
-                                        position={[xOffset, -1, 0]}
-                                        fontSize={0.5}
-                                        color="white"
-                                        anchorX="center"
-                                        anchorY="middle"
-                                    >
-                                        {load.type === 'full' ? `Container ${load.id} (Full)` : `Container ${load.id} (Partial)`}
-                                    </Text>
-                                </group>
-                            );
-                        })
-                    ) : (
-                        <ContainerView container={container} position={[0, 0, 0]} />
-                    )}
+                                <Text
+                                    position={[xOffset, -1, zOffset]}
+                                    fontSize={0.5}
+                                    color="white"
+                                    anchorX="center"
+                                    anchorY="middle"
+                                >
+                                    {load.type === 'full' ? `Container ${load.id} (Full)` : `Container ${load.id} (Partial)`}
+                                </Text>
+                            </group>
+                        );
+                    })}
                 </Center>
 
                 <Grid
@@ -528,4 +567,4 @@ export const Visualizer: React.FC<VisualizerProps> = ({ result, container, box, 
             </Canvas>
         </div>
     );
-};
+}); // End React.memo

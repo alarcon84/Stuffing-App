@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import type { Box, Container, Pallet, Dimensions, Material } from '@stuffing-calc/core';
+import type { Box, Container, Pallet, Dimensions, Material, PackingMode } from '@stuffing-calc/core';
 import { Settings, Box as BoxIcon, Container as ContainerIcon, Pencil, X, Layers, Calculator, Wand2, Plus, Trash2, Copy } from 'lucide-react';
 import { calculatePacking } from '@stuffing-calc/core';
 
@@ -7,9 +7,11 @@ interface InputPanelProps {
     onCalculate: (
         container: Container,
         materials: Material[],
-        isCombined: boolean,
+        packingMode: PackingMode,
         margins: { length: number; width: number; height: number },
-        enableFullMix: boolean
+        enableTopUp?: boolean,
+        enableFullMix?: boolean,
+        fullMixRotations?: { x: boolean; y: boolean; z: boolean }
     ) => void;
 }
 
@@ -54,17 +56,21 @@ export const InputPanel: React.FC<InputPanelProps> = ({ onCalculate }) => {
                 maxLoadHeight: 2650,
                 usePallet: false,
                 stackPallets: false
-            },
-            maxSt: false
+            }
         }
     ]);
 
     const [activeTabId, setActiveTabId] = useState<number>(1);
-    const [isCombined, setIsCombined] = useState<boolean>(false);
-    const [enableFullMix, setEnableFullMix] = useState<boolean>(false);
+    // PHASE 8 Step 3.5: Minimal Stub - packingMode replaces isCombined + enableFullMix
+    const [packingMode, setPackingMode] = useState<PackingMode>('SEQUENTIAL');
     const [container, setContainer] = useState<Container>(CONTAINER_TYPES[3]); // Default 53'
     const [margins, setMargins] = useState<{ length: number; width: number; height: number }>({ length: 20, width: 20, height: 20 });
     const [addCount, setAddCount] = useState<number>(1);
+
+    // Pipeline Pass Toggles
+    const [enableTopUp, setEnableTopUp] = useState<boolean>(false);
+    const [enableFullMix, setEnableFullMix] = useState<boolean>(false);
+    const [fullMixRotations, setFullMixRotations] = useState({ x: true, y: true, z: true });
 
     // Editable container types for the modal
     const [editableContainers, setEditableContainers] = useState<Container[]>([...CONTAINER_TYPES]);
@@ -139,8 +145,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ onCalculate }) => {
                     maxLoadHeight: container.dimensions.height - 50,
                     usePallet: false,
                     stackPallets: false
-                },
-                maxSt: false
+                }
             });
             nextId++;
         }
@@ -183,8 +188,8 @@ export const InputPanel: React.FC<InputPanelProps> = ({ onCalculate }) => {
 
     // --- Auto-Recalculate ---
     const handleRecalculate = useCallback(() => {
-        onCalculate(container, materials, isCombined, margins, enableFullMix);
-    }, [container, materials, isCombined, margins, enableFullMix, onCalculate]);
+        onCalculate(container, materials, packingMode, margins, enableTopUp, enableFullMix, fullMixRotations);
+    }, [container, materials, packingMode, margins, enableTopUp, enableFullMix, fullMixRotations, onCalculate]);
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter') {
@@ -383,7 +388,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ onCalculate }) => {
                         const selected = CONTAINER_TYPES.find(c => c.name === e.target.value);
                         if (selected) {
                             setContainer(selected);
-                            setTimeout(() => onCalculate(selected, materials, isCombined, margins, enableFullMix), 0);
+                            setTimeout(() => onCalculate(selected, materials, packingMode, margins, enableTopUp, enableFullMix, fullMixRotations), 0);
                         }
                     }}
                     className="w-full p-3 border rounded text-base h-12 bg-white"
@@ -436,34 +441,152 @@ export const InputPanel: React.FC<InputPanelProps> = ({ onCalculate }) => {
                 </div>
             </section>
 
-            {/* Combined Toggle */}
-            <div className="flex flex-col gap-1 pb-2 border-b">
-                <div className="flex items-center gap-2">
-                    <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 cursor-pointer select-none">
+            {/* Packing Mode Selection */}
+            <div className="flex flex-col gap-2 pb-4 border-b border-gray-200">
+                <h3 className="text-sm font-semibold text-gray-700">Packing Mode</h3>
+                <div className="flex flex-col gap-2">
+                    <label className="flex items-start gap-2 cursor-pointer">
                         <input
-                            type="checkbox"
-                            checked={isCombined}
-                            onChange={(e) => setIsCombined(e.target.checked)}
-                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                            type="radio"
+                            name="packingMode"
+                            value="SEQUENTIAL"
+                            checked={packingMode === 'SEQUENTIAL'}
+                            onChange={() => setPackingMode('SEQUENTIAL')}
+                            className="mt-1"
                         />
-                        Combined Packing
+                        <span className="text-sm text-gray-700">
+                            <span className="font-medium">Sequential</span> – Pack materials independently (no mixing)
+                        </span>
                     </label>
-                    <span className="text-xs text-gray-400">(Mix materials in containers)</span>
+
+                    <label className="flex items-start gap-2 cursor-pointer">
+                        <input
+                            type="radio"
+                            name="packingMode"
+                            value="SMART_STACK"
+                            checked={packingMode === 'SMART_STACK'}
+                            onChange={() => setPackingMode('SMART_STACK')}
+                            className="mt-1"
+                        />
+                        <span className="text-sm text-gray-700">
+                            <span className="font-medium">Smart Stack</span> – Stack compatible materials vertically
+                        </span>
+                    </label>
+
+                    <label className="flex items-start gap-2 cursor-not-allowed opacity-60">
+                        <input
+                            type="radio"
+                            name="packingMode"
+                            value="TETRIS"
+                            checked={packingMode === 'TETRIS'}
+                            disabled={true}
+                            className="mt-1 cursor-not-allowed"
+                        />
+                        <span className="text-sm text-gray-700">
+                            <span className="font-medium">Tetris (Experimental)</span> – Free-form packing (non-physical)
+                        </span>
+                    </label>
                 </div>
-                {isCombined && (
-                    <div className="flex items-center gap-2 ml-6 animate-in fade-in slide-in-from-top-1">
-                        <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
-                            <input
-                                type="checkbox"
-                                checked={enableFullMix}
-                                onChange={(e) => setEnableFullMix(e.target.checked)}
-                                className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
-                            />
-                            Full Mix
-                        </label>
-                        <span className="text-xs text-gray-400">(Allow distinct materials to stack on top of each other)</span>
+
+                {/* Visual Validation for SMART_STACK */}
+                {packingMode === 'SMART_STACK' && (
+                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800 flex flex-col gap-1">
+                        <span className="font-bold flex items-center gap-1">ℹ️ Smart Stack Mode (Active)</span>
+                        <span>Materials may stack vertically if dimensions allow</span>
                     </div>
                 )}
+
+                {/* Pipeline Pass Options */}
+                <div className="bg-white p-3 rounded border border-gray-200 space-y-2 mt-3">
+                    <div className="text-xs font-medium text-gray-500 mb-2">Post-Processing Passes</div>
+
+                    <label className="flex items-start gap-2 cursor-pointer hover:bg-gray-50 p-1.5 rounded transition-colors">
+                        <input
+                            type="checkbox"
+                            checked={enableTopUp}
+                            onChange={(e) => {
+                                const newValue = e.target.checked;
+                                setEnableTopUp(newValue);
+                                setTimeout(() => onCalculate(container, materials, packingMode, margins, newValue, enableFullMix, fullMixRotations), 0);
+                            }}
+                            className="mt-0.5"
+                        />
+                        <div className="flex-1">
+                            <div className="text-sm font-medium text-gray-700">Fill Vertical Space</div>
+                            <div className="text-xs text-gray-500">Add flat-oriented boxes above loads to use empty vertical space</div>
+                        </div>
+                    </label>
+
+                    <label className="flex items-start gap-2 cursor-pointer hover:bg-gray-50 p-1.5 rounded transition-colors">
+                        <input
+                            type="checkbox"
+                            checked={enableFullMix}
+                            onChange={(e) => {
+                                const newValue = e.target.checked;
+                                setEnableFullMix(newValue);
+                                setTimeout(() => onCalculate(container, materials, packingMode, margins, enableTopUp, newValue, fullMixRotations), 0);
+                            }}
+                            className="mt-0.5"
+                        />
+                        <div className="flex-1">
+                            <div className="text-sm font-medium text-gray-700">Maximize Space</div>
+                            <div className="text-xs text-gray-500">Aggressively fill all remaining spaces with best-fit orientations</div>
+
+                            {/* Full Mix Orientation Controls */}
+                            {enableFullMix && (
+                                <div className="mt-2 flex gap-3 items-center animate-in fade-in slide-in-from-top-1">
+                                    <span className="text-xs font-semibold text-gray-500">Allowed:</span>
+                                    <label className="flex items-center gap-1 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={fullMixRotations.x}
+                                            onChange={(e) => {
+                                                const newVal = { ...fullMixRotations, x: e.target.checked };
+                                                setFullMixRotations(newVal);
+                                                setTimeout(() => onCalculate(container, materials, packingMode, margins, enableTopUp, enableFullMix, newVal), 0);
+                                            }}
+                                            className="w-3 h-3 text-blue-600 rounded focus:ring-blue-500"
+                                        />
+                                        <span className="text-xs text-gray-600">Vert (V)</span>
+                                    </label>
+                                    <label className="flex items-center gap-1 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={fullMixRotations.y}
+                                            onChange={(e) => {
+                                                const newVal = { ...fullMixRotations, y: e.target.checked };
+                                                setFullMixRotations(newVal);
+                                                setTimeout(() => onCalculate(container, materials, packingMode, margins, enableTopUp, enableFullMix, newVal), 0);
+                                            }}
+                                            className="w-3 h-3 text-blue-600 rounded focus:ring-blue-500"
+                                        />
+                                        <span className="text-xs text-gray-600">Horiz (H)</span>
+                                    </label>
+                                    <label className="flex items-center gap-1 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={fullMixRotations.z}
+                                            onChange={(e) => {
+                                                const newVal = { ...fullMixRotations, z: e.target.checked };
+                                                setFullMixRotations(newVal);
+                                                setTimeout(() => onCalculate(container, materials, packingMode, margins, enableTopUp, enableFullMix, newVal), 0);
+                                            }}
+                                            className="w-3 h-3 text-blue-600 rounded focus:ring-blue-500"
+                                        />
+                                        <span className="text-xs text-gray-600">Flat (F)</span>
+                                    </label>
+                                </div>
+                            )}
+                        </div>
+                    </label>
+
+                    {(enableTopUp || enableFullMix) && (
+                        <div className="flex gap-1 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-200 mt-2">
+                            <div className="mt-0.5">ℹ️</div>
+                            <div>Only applied to fully packed containers</div>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Materials Tabs */}
@@ -678,18 +801,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ onCalculate }) => {
                     </div>
                 </section>
 
-                {/* MaxSt Checkbox */}
-                <div className="flex items-center gap-2 px-1">
-                    <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none" title="If checked, fill remaining vertical space with flat-stacked boxes after main configuration.">
-                        <input
-                            type="checkbox"
-                            checked={activeMaterial.maxSt || false}
-                            onChange={(e) => updateMaterial(activeMaterial.id, { maxSt: e.target.checked })}
-                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                        />
-                        <span className="font-medium">MaxSt (Maximize Stacking)</span>
-                    </label>
-                </div>
+
 
                 {/* Pallet Settings */}
                 <section className="space-y-3">

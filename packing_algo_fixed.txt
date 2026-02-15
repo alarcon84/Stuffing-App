@@ -1,0 +1,425 @@
+// KEY FIX: Add this to your App.tsx or main component file
+
+// BEFORE: The issue is the visualizer renders with stale data
+const [result, setResult] = useState<PackingResult | null>(null);
+
+const handleCalculate = () => {
+    const newResult = calculatePacking(...);
+    setResult(newResult); // This causes intermediate renders with old data
+};
+
+// AFTER: Clear the result FIRST, then calculate
+const [result, setResult] = useState<PackingResult | null>(null);
+const [isCalculating, setIsCalculating] = useState(false);
+
+const handleCalculate = async () => {
+    setIsCalculating(true);
+    setResult(null); // ← CRITICAL: Clear old result immediately
+    
+    // Small delay to ensure UI clears
+    await new Promise(resolve => setTimeout(resolve, 0));
+    
+    const newResult = calculatePacking(...);
+    setResult(newResult);
+    setIsCalculating(false);
+};
+
+// In your Visualizer component, add this guard:
+const Visualizer = ({ result }: { result: PackingResult | null }) => {
+    // Don't render anything if result is null
+    if (!result || !result.loads || result.loads.length === 0) {
+        return <div>No data to display</div>;
+    }
+    
+    // Rest of your visualization code...
+};
+
+
+// ============================================
+// SPECIFIC FIXES FOR YOUR CODEBASE
+// ============================================
+
+// Fix 1: In App.tsx - Modify the calculation handler
+const handleOptionsChange = (topUp: boolean, fullMix: boolean) => {
+    // Clear result immediately when options change
+    setResult(null);
+    
+    // Then recalculate
+    const newResult = calculatePacking(
+        container,
+        materials,
+        usePallets,
+        margins,
+        packingStrategy,
+        topUp,    // ← These are the options causing re-renders
+        fullMix   // ← 
+    );
+    
+    setResult(newResult);
+};
+
+// Fix 2: In Visualizer.tsx - Add proper guards
+const Visualizer = ({ result }: VisualizerProps) => {
+    console.log("Visualizer rendering. Result:", result);
+    
+    // GUARD 1: No result at all
+    if (!result) {
+        return (
+            <div className="visualizer-container">
+                <div className="no-data">Click "Calculate" to see packing visualization</div>
+            </div>
+        );
+    }
+    
+    // GUARD 2: Result exists but no loads
+    if (!result.loads || result.loads.length === 0) {
+        return (
+            <div className="visualizer-container">
+                <div className="no-data">No containers to display</div>
+            </div>
+        );
+    }
+    
+    console.log("Loads:", result.loads.length);
+    result.loads.forEach((load, i) => {
+        console.log(`Load ${i + 1}: ${load.items?.length || 0} items`);
+    });
+    
+    // GUARD 3: Validate each load has items array
+    const validLoads = result.loads.filter(load => 
+        load.items && Array.isArray(load.items) && load.items.length > 0
+    );
+    
+    if (validLoads.length === 0) {
+        return (
+            <div className="visualizer-container">
+                <div className="no-data">No items to display</div>
+            </div>
+        );
+    }
+    
+    // Now safe to render
+    return (
+        <div className="visualizer-container">
+            {validLoads.map((load, index) => (
+                <ContainerView 
+                    key={`load-${load.id}-${index}`} // Unique key
+                    load={load} 
+                />
+            ))}
+        </div>
+    );
+};
+
+// Fix 3: In your main calculation trigger
+const handleRecalculate = () => {
+    // Step 1: Clear everything
+    setResult(null);
+    setError(null);
+    
+    // Step 2: Validate inputs
+    if (!container || !materials || materials.length === 0) {
+        setError("Please configure container and materials");
+        return;
+    }
+    
+    // Step 3: Calculate fresh
+    try {
+        const newResult = calculatePacking(
+            container,
+            materials,
+            usePallets,
+            margins,
+            packingStrategy,
+            enableTopUp,
+            enableFullMix
+        );
+        
+        // Step 4: Set new result only if valid
+        if (newResult && newResult.loads) {
+            setResult(newResult);
+        } else {
+            setError("Calculation produced invalid result");
+        }
+    } catch (err) {
+        console.error("Calculation error:", err);
+        setError(`Calculation failed: ${err.message}`);
+    }
+};
+
+// Fix 4: Debounce rapid option changes
+import { useCallback, useRef } from 'react';
+
+const useDebounce = (callback: Function, delay: number) => {
+    const timeoutRef = useRef<NodeJS.Timeout>();
+    
+    return useCallback((...args: any[]) => {
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+        }
+        
+        timeoutRef.current = setTimeout(() => {
+            callback(...args);
+        }, delay);
+    }, [callback, delay]);
+};
+
+// In your component:
+const debouncedCalculate = useDebounce((topUp: boolean, fullMix: boolean) => {
+    setResult(null); // Clear first
+    const newResult = calculatePacking(..., topUp, fullMix);
+    setResult(newResult);
+}, 300); // Wait 300ms before recalculating
+
+// Use it for option changes:
+const handleTopUpChange = (enabled: boolean) => {
+    setEnableTopUp(enabled);
+    debouncedCalculate(enabled, enableFullMix);
+};
+
+// Fix 5: Add loading state to prevent partial renders
+const [isCalculating, setIsCalculating] = useState(false);
+
+const handleCalculate = () => {
+    setIsCalculating(true);
+    setResult(null);
+    
+    // Use setTimeout to ensure state updates
+    setTimeout(() => {
+        try {
+            const newResult = calculatePacking(...);
+            setResult(newResult);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setIsCalculating(false);
+        }
+    }, 10);
+};
+
+// In render:
+{isCalculating && <div className="loading-overlay">Calculating...</div>}
+{!isCalculating && result && <Visualizer result={result} />}
+
+
+// ============================================
+// COMPLETE APP.TSX EXAMPLE
+// ============================================
+
+import React, { useState, useCallback, useRef } from 'react';
+import { calculatePacking } from './packingAlgorithm';
+import Visualizer from './Visualizer';
+
+function App() {
+    const [result, setResult] = useState<PackingResult | null>(null);
+    const [isCalculating, setIsCalculating] = useState(false);
+    const [enableTopUp, setEnableTopUp] = useState(false);
+    const [enableFullMix, setEnableFullMix] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    
+    // Debounce helper
+    const debounceTimeout = useRef<NodeJS.Timeout>();
+    
+    const performCalculation = useCallback(() => {
+        setIsCalculating(true);
+        setResult(null); // Clear immediately
+        setError(null);
+        
+        setTimeout(() => {
+            try {
+                const newResult = calculatePacking(
+                    container,
+                    materials,
+                    usePallets,
+                    margins,
+                    packingStrategy,
+                    enableTopUp,
+                    enableFullMix
+                );
+                
+                console.log("Calculation result:", newResult);
+                setResult(newResult);
+            } catch (err: any) {
+                console.error("Calculation error:", err);
+                setError(err.message || "Calculation failed");
+            } finally {
+                setIsCalculating(false);
+            }
+        }, 10);
+    }, [container, materials, usePallets, margins, packingStrategy, enableTopUp, enableFullMix]);
+    
+    const debouncedCalculate = useCallback(() => {
+        if (debounceTimeout.current) {
+            clearTimeout(debounceTimeout.current);
+        }
+        
+        debounceTimeout.current = setTimeout(() => {
+            performCalculation();
+        }, 300);
+    }, [performCalculation]);
+    
+    const handleTopUpChange = (enabled: boolean) => {
+        setEnableTopUp(enabled);
+        debouncedCalculate();
+    };
+    
+    const handleFullMixChange = (enabled: boolean) => {
+        setEnableFullMix(enabled);
+        debouncedCalculate();
+    };
+    
+    const handleRecalculate = () => {
+        performCalculation(); // Immediate, no debounce
+    };
+    
+    return (
+        <div className="app">
+            <div className="controls">
+                <label>
+                    <input 
+                        type="checkbox" 
+                        checked={enableTopUp}
+                        onChange={(e) => handleTopUpChange(e.target.checked)}
+                    />
+                    Enable Top Up
+                </label>
+                
+                <label>
+                    <input 
+                        type="checkbox" 
+                        checked={enableFullMix}
+                        onChange={(e) => handleFullMixChange(e.target.checked)}
+                    />
+                    Enable Full Mix
+                </label>
+                
+                <button onClick={handleRecalculate}>
+                    Recalculate
+                </button>
+            </div>
+            
+            {error && (
+                <div className="error">{error}</div>
+            )}
+            
+            {isCalculating && (
+                <div className="loading">Calculating packing...</div>
+            )}
+            
+            {!isCalculating && result && (
+                <Visualizer result={result} />
+            )}
+            
+            {!isCalculating && !result && !error && (
+                <div className="no-data">
+                    Configure options and click Calculate
+                </div>
+            )}
+        </div>
+    );
+}
+
+export default App;
+
+
+// ============================================
+// COMPLETE VISUALIZER.TSX EXAMPLE  
+// ============================================
+
+import React from 'react';
+import { PackingResult, ContainerLoad } from './types';
+
+interface VisualizerProps {
+    result: PackingResult | null;
+}
+
+const Visualizer: React.FC<VisualizerProps> = ({ result }) => {
+    console.log("Visualizer rendering. Result:", result);
+    
+    // Guard: No result
+    if (!result) {
+        return (
+            <div className="visualizer-empty">
+                Click "Calculate" to visualize packing
+            </div>
+        );
+    }
+    
+    // Guard: No loads
+    if (!result.loads || result.loads.length === 0) {
+        console.log("No loads to display");
+        return (
+            <div className="visualizer-empty">
+                No containers to display
+            </div>
+        );
+    }
+    
+    console.log("Loads:", result.loads.length);
+    result.loads.forEach((load, i) => {
+        console.log(`Load ${i + 1}: ${load.items?.length || 0} items`);
+    });
+    
+    // Filter to only valid loads with items
+    const validLoads = result.loads.filter(load => 
+        load && load.items && Array.isArray(load.items) && load.items.length > 0
+    );
+    
+    if (validLoads.length === 0) {
+        return (
+            <div className="visualizer-empty">
+                No items packed
+            </div>
+        );
+    }
+    
+    return (
+        <div className="visualizer-container">
+            {validLoads.map((load, index) => (
+                <div 
+                    key={`container-${load.id}-${index}`}
+                    className="container-view"
+                >
+                    <h3>Container {index + 1}</h3>
+                    <div className="stats">
+                        <span>Items: {load.items.length}</span>
+                        <span>Utilization: {load.utilization.toFixed(1)}%</span>
+                    </div>
+                    
+                    {/* Your 3D visualization component */}
+                    <Canvas3D load={load} />
+                </div>
+            ))}
+        </div>
+    );
+};
+
+export default Visualizer;
+
+
+// ============================================
+// SUMMARY OF FIXES
+// ============================================
+
+/**
+ * ROOT CAUSE:
+ * - React was re-rendering the visualizer with stale/partial data
+ * - Option changes triggered multiple rapid calculations
+ * - Old results weren't cleared before new calculations
+ * - This created "imaginary boxes" - boxes from previous calculations
+ * 
+ * FIXES APPLIED:
+ * 1. Clear result state (setResult(null)) BEFORE calculating
+ * 2. Add isCalculating flag to prevent partial renders
+ * 3. Add guards in Visualizer to handle null/invalid data
+ * 4. Debounce rapid option changes (300ms)
+ * 5. Use setTimeout to ensure state clears before calculation
+ * 6. Validate loads have items before rendering
+ * 7. Use unique keys for React list rendering
+ * 
+ * TESTING:
+ * - Toggle options: should show loading, then clean result
+ * - Decrease size: should clear old boxes immediately
+ * - Click Enter/Recalculate: should work as before
+ * - No more "imaginary boxes" from stale renders
+ */

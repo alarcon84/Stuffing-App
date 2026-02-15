@@ -1,7 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { InputPanel, Visualizer, BatchProcessor } from '@stuffing-calc/ui';
+import { DebugPanel } from './components/DebugPanel';
 import { calculatePacking } from '@stuffing-calc/core';
-import type { Container, PackingResult, Material } from '@stuffing-calc/core';
+import type { Container, PackingResult, Material, PackingMode } from '@stuffing-calc/core';
 import { X, FileText, DollarSign, Scale, Minus, Maximize2 } from 'lucide-react';
 import './index.css';
 import packageJson from '../package.json';
@@ -43,20 +44,98 @@ function App() {
   const [resultsMinimized, setResultsMinimized] = useState(false);
 
 
+  const [isCalculating, setIsCalculating] = useState(false);
+
+  // Ref for debounce timer
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Refs to hold latest data for the async calculation to avoid closure staleness
+  const latestDataRef = useRef<{
+    container: Container;
+    materials: Material[];
+    packingMode: PackingMode;
+    margins?: { length: number; width: number; height: number };
+    enableTopUp?: boolean;
+    enableFullMix?: boolean;
+    fullMixRotations?: { x: boolean; y: boolean; z: boolean };
+  } | null>(null);
+
+  // Perform calculation using the REF data (always fresh)
+  const performCalculationWithRef = useCallback(() => {
+    if (!latestDataRef.current) return;
+
+    const { container, materials, packingMode, margins, enableTopUp, enableFullMix, fullMixRotations } = latestDataRef.current;
+
+    setIsCalculating(true);
+
+    try {
+      const newResult = calculatePacking(
+        container,
+        materials,
+        false,
+        margins,
+        packingMode,
+        enableTopUp,
+        enableFullMix,
+        fullMixRotations
+      );
+
+      console.log('Calculation result:', newResult);
+
+      setPackingResult(() => {
+        // Always update result to ensure visualizer reflects changes in position/layout
+        // even if totals remain the same (e.g. toggling Full Mix might move items but keep count)
+        return newResult;
+      });
+    } catch (err) {
+      console.error("Calculation failed", err);
+    } finally {
+      setIsCalculating(false);
+    }
+  }, []);
+
   const handleCalculate = useCallback((
     container: Container,
     materials: Material[],
-    combined: boolean,
+    packingMode: PackingMode,
     margins?: { length: number; width: number; height: number },
-    enableFullMix?: boolean
+    enableTopUp?: boolean,
+    enableFullMix?: boolean,
+    fullMixRotations?: { x: boolean; y: boolean; z: boolean }
   ) => {
+    // Update local state for UI
     setCurrentContainer(container);
     setCurrentMaterials(materials);
 
-    const result = calculatePacking(container, materials, combined, margins, enableFullMix);
-    console.log('Calculation result:', result);
-    setPackingResult(result);
-  }, []);
+    // Update ref for calculation - IMPLICIT SYNC (Backup)
+    latestDataRef.current = { container, materials, packingMode, margins, enableTopUp, enableFullMix, fullMixRotations };
+
+    // Clear any pending calculation
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    // Debounce the heavy calculation
+    debounceTimerRef.current = setTimeout(() => {
+      performCalculationWithRef();
+    }, 300); // 300ms debounce
+  }, [performCalculationWithRef]);
+
+  // Global Enter Key Handler
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        if (debounceTimerRef.current) {
+          clearTimeout(debounceTimerRef.current);
+        }
+        performCalculationWithRef();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [performCalculationWithRef]);
+
 
   const handleShowAllContainers = () => {
     if (currentMaterials.length === 0) return;
@@ -77,7 +156,7 @@ function App() {
         [tempMat],
         false,
         { length: 20, width: 20, height: 20 },
-        false
+        'SEQUENTIAL'
       );
 
       // Find the item count of the first load (which should be full)
@@ -168,23 +247,32 @@ function App() {
   return (
     <div className="flex h-screen w-screen overflow-hidden">
       <InputPanel onCalculate={handleCalculate} />
-      <div className="flex-1 relative">
+
+      {/* Visualizer Wrapper with Transition */}
+      <div className={`flex-1 relative transition-opacity duration-200 ${isCalculating ? 'opacity-60' : 'opacity-100'}`}>
         <Visualizer
           result={packingResult}
           container={currentContainer}
-          // Pass legacy props for backward compatibility if Visualizer hasn't been updated yet
-          // But we should update Visualizer too. For now, let's map the first two materials
-          // to keep it working if Visualizer expects box/box2.
-          // Actually, I need to update Visualizer.tsx as well.
+          // Pass legacy props for backward compatibility
           box={currentMaterials[0]?.box}
           pallet={currentMaterials[0]?.pallet}
           layerConfig={currentMaterials[0]?.layerConfig}
           box2={currentMaterials[1]?.box}
           pallet2={currentMaterials[1]?.pallet}
           layerConfig2={currentMaterials[1]?.layerConfig}
-          // New prop for multi-material support in Visualizer (to be implemented)
+          // New prop for multi-material support
           materials={currentMaterials}
         />
+
+        {/* Loading Overlay */}
+        {isCalculating && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/30 backdrop-blur-sm pointer-events-none">
+            <div className="bg-white px-6 py-4 rounded-xl shadow-2xl border border-gray-100 flex items-center gap-4 animate-in fade-in zoom-in duration-200">
+              <div className="w-6 h-6 border-3 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+              <div className="text-gray-700 font-semibold">Calculating Layout...</div>
+            </div>
+          </div>
+        )}
 
         {/* Overlay Stats */}
         {packingResult && (
@@ -522,7 +610,10 @@ function App() {
             </div>
           </div>
         )}
+
       </div>
+      {/* DebugPanel removed to prevent user confusion with main controls */}
+      {/* <DebugPanel /> */}
     </div >
   );
 }

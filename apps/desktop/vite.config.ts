@@ -5,8 +5,11 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   base: './',
   plugins: [react()],
+  optimizeDeps: {
+    exclude: ['@stuffing-calc/core', '@stuffing-calc/ui'], // Prevent pre-bundling workspace packages
+  },
   server: {
     port: 3000,
-    strictPort: false, // Try next available port if 3000 is in use
+    strictPort: true, // Fail if 3000 is in use, so we know to kill the zombie process
   },
 })

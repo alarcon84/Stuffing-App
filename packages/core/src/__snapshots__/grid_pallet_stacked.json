@@ -1,0 +1,104 @@
+{
+  "loads": [
+    {
+      "id": 1,
+      "items": [
+        {
+          "position": [
+            620,
+            595,
+            520
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1200,
+            "width": 1000,
+            "height": 1150
+          },
+          "type": "pallet",
+          "itemCount": 45,
+          "materialId": 1,
+          "grid": {
+            "cols": 3,
+            "rows": 3,
+            "layers": 5
+          }
+        },
+        {
+          "position": [
+            620,
+            595,
+            1520
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1200,
+            "width": 1000,
+            "height": 1150
+          },
+          "type": "pallet",
+          "itemCount": 45,
+          "materialId": 1,
+          "grid": {
+            "cols": 3,
+            "rows": 3,
+            "layers": 5
+          }
+        },
+        {
+          "position": [
+            620,
+            1745,
+            520
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": {
+            "length": 1200,
+            "width": 1000,
+            "height": 1150
+          },
+          "type": "pallet",
+          "itemCount": 10,
+          "materialId": 1,
+          "grid": {
+            "cols": 3,
+            "rows": 3,
+            "layers": 5
+          }
+        }
+      ],
+      "itemCount": 100,
+      "utilization": 12.471409997486544,
+      "type": "partial"
+    }
+  ],
+  "totalItems": 100,
+  "totalContainers": 1,
+  "unpackedItems": 0,
+  "containerDimensions": {
+    "length": 5898,
+    "width": 2352,
+    "height": 2393
+  },
+  "errors": [],
+  "actualUsedVolume": 2400000000,
+  "packedBoxDimensions": {
+    "length": 400,
+    "width": 300,
+    "height": 200
+  },
+  "totalPallets": 3,
+  "totalLots": 0
+}

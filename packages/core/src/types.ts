@@ -4,6 +4,14 @@ export interface Dimensions {
   height: number;
 }
 
+/**
+ * PHASE 8: Explicit Packing Modes
+ * - SEQUENTIAL: Materials packed in strict order, no stacking between materials
+ * - SMART_STACK: Dimension-aware vertical continuation when compatible
+ * - TETRIS: Greedy box-level filling, ignores material boundaries
+ */
+export type PackingMode = 'SEQUENTIAL' | 'SMART_STACK' | 'TETRIS';
+
 export interface Box {
   id: string;
   materialId?: number; // 1 or 2
@@ -15,6 +23,12 @@ export interface Box {
     y: boolean; // Yaw
     z: boolean; // Pitch
   };
+}
+
+export interface FullMixRotations {
+  x: boolean; // Vertical
+  y: boolean; // Horizontal
+  z: boolean; // Flat
 }
 
 export interface Container {
@@ -38,12 +52,16 @@ export interface PlacedItem {
   type: 'box' | 'pallet';
   itemCount?: number; // Number of actual items in this placed unit (for partial units)
   materialId?: number; // 1 or 2
+  packingMode?: string; // Optional: Mode used to pack this item (e.g., 'SMART_STACK')
   isFlatTopOff?: boolean; // If true, this item was added as a flat top-off
   grid?: {
     cols: number; // Number of items along width (Z)
     rows: number; // Number of items along length (X)
     layers: number; // Number of items along height (Y)
   };
+  locked?: boolean; // If true, this item cannot be moved by subsequent passes
+  source?: 'DEFAULT' | 'TOP_UP' | 'FULL_MIX'; // Traceability for debugging
+  isPalletBase?: boolean; // If true, this item represents the base of a pallet
 }
 
 export interface ContainerLoad {
@@ -74,5 +92,4 @@ export interface Material {
   quantity: number;
   layerConfig: string;
   active: boolean;
-  maxSt?: boolean; // Maximize Stacking (Flat Top-Off)
 }
