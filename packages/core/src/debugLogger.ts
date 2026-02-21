@@ -1,6 +1,6 @@
 
 export class DebugLogger {
-    private enabled = process.env.NODE_ENV === 'development' || process.env.VITEST === 'true';
+    private enabled = (typeof (globalThis as any).process !== 'undefined' && (globalThis as any).process.env.NODE_ENV === 'development') || (typeof (globalThis as any).process !== 'undefined' && (globalThis as any).process.env.VITEST === 'true');
     private logs: Array<{ timestamp: number; category: string; message: string; data?: any }> = [];
 
     log(category: string, message: string, data?: any) {

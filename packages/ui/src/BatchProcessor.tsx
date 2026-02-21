@@ -1,11 +1,19 @@
 import { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { calculatePacking } from '@stuffing-calc/core';
-import type { Container, Box, Material } from '@stuffing-calc/core';
+import type { Container, Box, Material, PackingMode } from '@stuffing-calc/core';
 import { Upload, FileSpreadsheet, Download, AlertCircle, Loader2, X } from 'lucide-react';
 
 interface BatchProcessorProps {
     onClose: () => void;
+    currentSettings?: {
+        packingMode: PackingMode;
+        margins: { length: number; width: number; height: number };
+        enableTopUp: boolean;
+        enableFullMix: boolean;
+        fullMixRotations: { x: boolean; y: boolean; z: boolean };
+        activeMaterial?: Material;
+    } | null;
 }
 
 const CONTAINER_DEFAULTS: Record<string, Container> = {
@@ -15,13 +23,13 @@ const CONTAINER_DEFAULTS: Record<string, Container> = {
     '53ft': { name: "53' Trailer", type: '53', dimensions: { length: 16000, width: 2540, height: 2700 } }
 };
 
-export function BatchProcessor({ onClose }: BatchProcessorProps) {
+export function BatchProcessor({ onClose, currentSettings }: BatchProcessorProps) {
     const [file, setFile] = useState<File | null>(null);
     const [processing, setProcessing] = useState(false);
     const [progress, setProgress] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
-    const [calculationMode, setCalculationMode] = useState<'optimal' | 'horizontal' | 'flat'>('horizontal');
+    const [calculationMode, setCalculationMode] = useState<'optimal' | 'horizontal' | 'flat' | 'current'>('current');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -86,10 +94,28 @@ export function BatchProcessor({ onClose }: BatchProcessorProps) {
                 }
 
                 let allowedRotations = { x: true, y: true, z: true };
+                let packingMode: PackingMode = 'SEQUENTIAL';
+                let margins = { length: 20, width: 20, height: 20 };
+                let enableTopUp = false;
+                let enableFullMix = false;
+                let fullMixRotations = { x: true, y: true, z: true };
+                let orientationPreference: 'default' | 'rotated' | undefined = undefined;
+
                 if (calculationMode === 'horizontal') {
                     allowedRotations = { x: false, y: true, z: false };
                 } else if (calculationMode === 'flat') {
                     allowedRotations = { x: false, y: false, z: true };
+                } else if (calculationMode === 'current' && currentSettings) {
+                    // Use active material's rotations if available
+                    if (currentSettings.activeMaterial) {
+                        allowedRotations = currentSettings.activeMaterial.box.allowedRotations;
+                        orientationPreference = currentSettings.activeMaterial.orientationPreference;
+                    }
+                    packingMode = currentSettings.packingMode;
+                    margins = currentSettings.margins;
+                    enableTopUp = currentSettings.enableTopUp;
+                    enableFullMix = currentSettings.enableFullMix;
+                    fullMixRotations = currentSettings.fullMixRotations;
                 }
 
                 const box: Box = {
@@ -103,6 +129,7 @@ export function BatchProcessor({ onClose }: BatchProcessorProps) {
                 const material: Material = {
                     id: 1,
                     box: box,
+                    orientationPreference: orientationPreference,
                     pallet: { dimensions: { length: 0, width: 0, height: 0 }, maxLoadHeight: 0, stackPallets: false, usePallet: false },
                     quantity: 100000, // Large quantity for "full container" calculation
                     layerConfig: '',
@@ -118,7 +145,12 @@ export function BatchProcessor({ onClose }: BatchProcessorProps) {
                     const result = calculatePacking(
                         container,
                         [material],
-                        false
+                        false,
+                        margins,
+                        packingMode,
+                        enableTopUp,
+                        enableFullMix,
+                        fullMixRotations
                     );
 
                     // Get count from first load (should be full)
@@ -227,6 +259,22 @@ export function BatchProcessor({ onClose }: BatchProcessorProps) {
                                 <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                                     <label className="block text-sm font-semibold text-gray-700 mb-2">Calculation Mode</label>
                                     <div className="space-y-2">
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="calcMode"
+                                                value="current"
+                                                checked={calculationMode === 'current'}
+                                                onChange={(e) => setCalculationMode(e.target.value as any)}
+                                                className="text-blue-600 focus:ring-blue-500"
+                                            />
+                                            <span className="text-sm text-gray-700 font-medium">
+                                                Current Configuration
+                                                <span className="block text-xs text-gray-400 font-normal">
+                                                    Uses selected options (Horizontal/Vertical, Fill, Max, etc.)
+                                                </span>
+                                            </span>
+                                        </label>
                                         <label className="flex items-center gap-2 cursor-pointer">
                                             <input
                                                 type="radio"

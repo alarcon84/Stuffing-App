@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { calculatePacking } from '@stuffing-calc/core';
 
 export const DebugPanel = () => {

@@ -83,6 +83,7 @@ export interface PackingResult {
   packedBoxDimensions?: Dimensions; // The dimensions of the box as packed (rotated)
   errors?: string[]; // Any validation errors or warnings
   actualUsedVolume?: number; // Actual volume of placed items (not including wasted space)
+  optimizationsAvailable?: import('./types').OptimizationResult[]; // List of potential optimizations found
 }
 
 export interface Material {
@@ -92,4 +93,12 @@ export interface Material {
   quantity: number;
   layerConfig: string;
   active: boolean;
+  orientationPreference?: 'default' | 'rotated'; // 'default' = face walls (length >= width), 'rotated' = 90 deg (width > length)
+}
+
+export interface OptimizationResult {
+  materialId: number;
+  originalCount: number;
+  optimizedCount: number;
+  recommendedPreference: 'default' | 'rotated';
 }

@@ -1,6 +1,7 @@
 import type { Material, ContainerLoad, Dimensions, PlacedItem } from '../types';
 import { packGridCore, type GridVolume } from '../packGridCore';
 import { mapToRealCoordinates, type PassResult, type VirtualContainer } from '../virtualContainer';
+import { hasPhysicalSupport } from '../utils';
 import { selectBestOrientation } from '../orientationSelector';
 
 /**
@@ -24,9 +25,6 @@ import { selectBestOrientation } from '../orientationSelector';
 
 /**
  * Run the TOP_UP pass on a single container load
- */
-/**
- * Run the TOP_UP pass on a single container load
  * STRICT LOCKING IMPLEMENTATION
  */
 export function runTopUpPass(
@@ -35,94 +33,202 @@ export function runTopUpPass(
     containerDims: Dimensions,
     margins: { length?: number; width?: number; height?: number },
     remainingQuantity: number,
-    totalPackedSoFar: number
+    totalPackedSoFar: number,
+    packingMode: import('../types').PackingMode,
+    yRangeFilter?: { min: number; max: number }  // NEW: Y-region isolation for Sequential mode
 ): PassResult {
     if (remainingQuantity <= 0) {
         return { placements: [], remainingQuantity: 0 };
     }
+
+    // NOTE: We no longer block SEQUENTIAL mode mixing here.
+    // If TopUpPass is called, the user has explicitly enabled "Fill Vertical Space",
+    // which implies they want to fill gaps even if materials mix vertically.
+    // The pass is already gated by enableTopUp in postProcessingPipeline.ts.
 
     const marginL = margins.length ?? 20;
     const marginW = margins.width ?? 20;
     const marginH = margins.height ?? 20;
 
     // Safety Check: Ensure load and container are valid
-    if (!load || !load.items) {
+    if (!load || !load.items || load.items.length === 0) {
         return { placements: [], remainingQuantity: 0 };
     }
 
-    // 1. Calculate highest placed Y (Top of the current load)
-    let highestPlacedY = marginH;
+    // --- Skyline Analysis Algorithm ---
+    // Instead of a single global maxY, we analyze the container profile along the length axis.
+    // 1. Divide length into small segments (e.g. 50mm)
+    // 2. Find max height in each segment
+    // 3. Group consecutive segments into regions of similar height
+    // 4. Create a virtual container for each region
 
-    if (load.items.length > 0) {
-        // Find maximum Y extent of any item
-        const maxY = Math.max(...load.items.map(i => i.position[1] + i.dimensions.height / 2));
-        highestPlacedY = Math.max(highestPlacedY, maxY);
-    }
+    // Define the segment size (resolution)
+    const SEGMENT_SIZE = 50;
+    const totalLength = containerDims.length - marginL; // Usable length
+    const numSegments = Math.ceil(totalLength / SEGMENT_SIZE);
 
-    // 2. Calculate Top Free Height
-    // containerDims.height - marginH (top margin) - highestPlacedY
-    const topFreeHeight = (containerDims.height - marginH) - highestPlacedY;
+    // Array to store max height for each segment
+    // Initialize with marginH (floor level)
+    const skyline = new Array(numSegments).fill(marginH);
 
-    // 3. Strict Validation
-    // "If remainingHeight < boxHeight return" (User Instruction)
-    // User also said "Strict greater-than, never equal" for safety
-    // For flat orientation, "boxHeight" means the box's smallest dimension (usually height or width depending on rotation)
-    // But TopUp forces Flat Orientation (Height = original Width).
-    // So we check against the Flat Height.
-    const flatHeight = material.box.dimensions.width; // Rotated: H = W
+    // Populate skyline
+    load.items.forEach(item => {
+        const itemTopY = item.position[1] + item.dimensions.height / 2;
+        const itemStart = item.position[0] - item.dimensions.length / 2;
+        const itemEnd = item.position[0] + item.dimensions.length / 2;
 
-    // Strict check: Must be STRICTLY greater to avoid zero-thickness or rounding issues
-    if (topFreeHeight <= flatHeight) {
-        // Log handled by pipeline caller
-        return { placements: [], remainingQuantity };
-    }
+        // Map item range to segments
+        const startSeg = Math.max(0, Math.floor((itemStart - marginL) / SEGMENT_SIZE));
+        const endSeg = Math.min(numSegments - 1, Math.floor((itemEnd - marginL) / SEGMENT_SIZE));
 
-    // 4. Create ONE virtual container
-    const virtualContainer: VirtualContainer = {
-        origin: {
-            x: marginL,
-            y: highestPlacedY,
-            z: marginW
-        },
-        length: containerDims.length - marginL * 2,
-        width: containerDims.width - marginW * 2,
-        height: topFreeHeight,
-        realContainerId: load.id
-    };
-
-    console.log(`[TOP-UP] Created virtual volume: origin=(${virtualContainer.origin.x}, ${virtualContainer.origin.y}, ${virtualContainer.origin.z}), size=(${virtualContainer.length}x${virtualContainer.height}x${virtualContainer.width})`);
-
-    // Check quota against global total
-    const globalRemaining = material.quantity - totalPackedSoFar;
-    const effectiveRemaining = Math.min(remainingQuantity, globalRemaining);
-
-    if (effectiveRemaining <= 0) {
-        console.log(`[TOP-UP] Global quota reached (Total: ${totalPackedSoFar}, Max: ${material.quantity}). Skipping.`);
-        return { placements: [], remainingQuantity };
-    }
-
-    // 5. Pack flat-orientation only
-    // We use the helper function but ensure it marks items as LOCKED
-    const result = packIntoVirtualContainerFlat(
-        material,
-        virtualContainer,
-        effectiveRemaining
-    );
-
-    // 6. Map back and Apply Locking
-    const newPlacements: PlacedItem[] = result.placements.map(p => {
-        const mapped = mapToRealCoordinates(p, virtualContainer);
-        return {
-            ...mapped,
-            locked: true,
-            source: 'TOP_UP',
-            isFlatTopOff: true
-        };
+        for (let i = startSeg; i <= endSeg; i++) {
+            if (itemTopY > skyline[i]) {
+                skyline[i] = itemTopY;
+            }
+        }
     });
 
+    // Group segments into regions
+    interface SkylineRegion {
+        startSeg: number;
+        endSeg: number;
+        height: number;
+    }
+
+    const regions: SkylineRegion[] = [];
+    if (numSegments > 0) {
+        let currentRegion: SkylineRegion = { startSeg: 0, endSeg: 0, height: skyline[0] };
+
+        for (let i = 1; i < numSegments; i++) {
+            // Check if height matches (with small tolerance)
+            if (Math.abs(skyline[i] - currentRegion.height) < 10) {
+                currentRegion.endSeg = i;
+            } else {
+                regions.push(currentRegion);
+                currentRegion = { startSeg: i, endSeg: i, height: skyline[i] };
+            }
+        }
+        regions.push(currentRegion);
+    }
+
+    // Process each region
+    const allPlacements: PlacedItem[] = [];
+    let currentRemaining = remainingQuantity;
+    let currentTotalPacked = totalPackedSoFar;
+
+    // Calculate the flat height - this is the height when the box is laid flat
+    // When flat, we use the SMALLEST dimension as height
+    const boxDims = material.box.dimensions;
+    const flatHeight = Math.min(boxDims.length, boxDims.width, boxDims.height);
+
+    for (const region of regions) {
+        if (currentRemaining <= 0) break;
+
+        // Check global quota
+        const globalRemaining = material.quantity - currentTotalPacked;
+        if (globalRemaining <= 0) break;
+
+        // Y-range filter: skip regions whose surface (bottom of the top-space) is below
+        // this material's own Y-floor. This prevents TopUp from filling vertical voids
+        // that sit inside an earlier material's Y-band in Sequential mode.
+        if (yRangeFilter && region.height < yRangeFilter.min) {
+            continue;
+        }
+
+        // Effective remaining for this region is bounded by both local need and global quota
+        const effectiveRegionLimit = Math.min(currentRemaining, globalRemaining);
+
+
+        const regionStart = marginL + (region.startSeg * SEGMENT_SIZE);
+        // Ensure end covers the full segment width
+        const regionEnd = marginL + ((region.endSeg + 1) * SEGMENT_SIZE);
+        const regionLength = regionEnd - regionStart;
+
+        // Calculate Top Free Height for this region
+        const topFreeHeight = (containerDims.height - marginH) - region.height;
+
+        // Skip if too short
+        if (topFreeHeight <= flatHeight) {
+            continue;
+        }
+        if (regionLength <= 0) {
+            continue;
+        }
+
+        // CRITICAL CONSTRAINT: Top-Up must only pack ABOVE existing loads.
+        // It should NOT pack on the empty floor (leave that for other modes or Full Mix).
+        // If the region height is at floor level (marginH), skip it.
+        if (region.height <= marginH + 1) { // +1mm tolerance
+            continue;
+        }
+
+
+
+        // Effective width
+        const regionWidth = containerDims.width - marginW * 2;
+
+        const virtualContainer: VirtualContainer = {
+            origin: {
+                x: regionStart, // Length axis
+                y: region.height, // Height axis
+                z: marginW // Width axis
+            },
+            length: regionLength,
+            width: regionWidth,
+            height: topFreeHeight,
+            realContainerId: load.id
+        };
+
+        const result = packIntoVirtualContainerFlat(
+            material,
+            virtualContainer,
+            effectiveRegionLimit
+        );
+
+        if (result.placements.length > 0) {
+            // Map back and Apply Locking
+            const validPlacements: PlacedItem[] = [];
+
+            // We need to check support for each item.
+            // Since items are usually packed bottom-up in the virtual container,
+            // we should check them in order.
+            // Also, we need to temporarily add them to the load to check support for subsequent items?
+            // Or just check against the base load?
+            // TopUp items can stack on each other.
+
+            // Let's create a temp load that includes the base load items
+            const tempLoad = { ...load, items: [...load.items] };
+
+            for (const p of result.placements) {
+                const mapped = mapToRealCoordinates(p, virtualContainer);
+                const item: PlacedItem = {
+                    ...mapped,
+                    locked: true,
+                    source: 'TOP_UP' as const,
+                    isFlatTopOff: true
+                };
+
+                // Check support
+                if (hasPhysicalSupport(item, tempLoad, marginH)) {
+                    validPlacements.push(item);
+                    tempLoad.items.push(item); // Add to temp load so it can support others
+                }
+            }
+
+            allPlacements.push(...validPlacements);
+            // Recalculate packed quantity based on valid placements
+            // Each placement is 1 item in this context (box)
+            const placedCount = validPlacements.length;
+            currentRemaining -= placedCount;
+            currentTotalPacked += placedCount;
+
+            console.log(`[TOP_UP] Region Y=${region.height.toFixed(0)}, L=${regionLength.toFixed(0)}: Placed ${placedCount} (Valid/Supported)`);
+        }
+    }
+
     return {
-        placements: newPlacements,
-        remainingQuantity: remainingQuantity - result.packedQuantity
+        placements: allPlacements,
+        remainingQuantity: currentRemaining
     };
 }
 
@@ -175,7 +281,8 @@ function packIntoVirtualContainerFlat(
         }
     };
 
-    const bestDims = selectBestOrientation(virtualContainerProxy, box, flatPermutations);
+    const selectionResult = selectBestOrientation(virtualContainerProxy, box, flatPermutations);
+    const bestDims = selectionResult.selectedDimensions;
 
     // Calculate how many fit
     const cols = Math.floor(virtualContainer.length / bestDims.length);

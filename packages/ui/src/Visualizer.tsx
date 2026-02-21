@@ -2,8 +2,9 @@ import React, { useMemo } from 'react';
 
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Grid, Center, Text } from '@react-three/drei';
-import { Maximize, X } from 'lucide-react';
+import { Maximize, X, Palette } from 'lucide-react';
 import type { PackingResult, Container, Box, Pallet, PlacedItem, Material } from '@stuffing-calc/core';
+import { PASTEL_PALETTE } from './InputPanel';
 import * as THREE from 'three';
 
 interface VisualizerProps {
@@ -22,6 +23,8 @@ interface VisualizerProps {
 
     onToggleFullscreen?: () => void;
     isFullscreen?: boolean;
+    activeMaterialId?: number;
+    onUpdateMaterialColor?: (id: number, color: string) => void;
 }
 
 const ContainerView: React.FC<{ container: Container; position: [number, number, number] }> = ({ container, position }) => {
@@ -111,8 +114,8 @@ const Boxes: React.FC<{ items: PlacedItem[]; containerDims: any; offset: [number
                 let layers = 1;
 
                 if (item.grid) {
-                    cols = item.grid.rows; // Packer X -> Visualizer X (cols)
-                    rows = item.grid.cols; // Packer Z -> Visualizer Z (rows)
+                    cols = item.grid.cols;  // items along length
+                    rows = item.grid.rows;  // items along width
                     layers = item.grid.layers;
                 } else {
                     // Legacy fallback
@@ -180,9 +183,12 @@ const Boxes: React.FC<{ items: PlacedItem[]; containerDims: any; offset: [number
                     rows = item.grid.rows;
                     layers = item.grid.layers;
                 } else {
-                    // Legacy fallback
+                    // Legacy fallback - only for DEFAULT source items
+                    // Pipeline items (TOP_UP, FULL_MIX) are individual boxes and 
+                    // should NEVER be subdivided by layerConfig
+                    const isPipelineItem = item.isFlatTopOff || item.source === 'TOP_UP' || item.source === 'FULL_MIX';
                     const normalizedConfig = layerConfig?.toLowerCase().replace(/[*×]/g, 'x') || '';
-                    if (normalizedConfig && normalizedConfig.includes('x') && box && !item.isFlatTopOff) {
+                    if (normalizedConfig && normalizedConfig.includes('x') && box && !isPipelineItem) {
                         const parts = normalizedConfig.split('x');
                         const horizontal = parseInt(parts[0], 10) || 0;
                         const vertical = parseInt(parts[1], 10) || 0;
@@ -343,9 +349,11 @@ const Boxes: React.FC<{ items: PlacedItem[]; containerDims: any; offset: [number
 };
 
 // Optimization: Use React.memo for the entire component
-export const Visualizer = React.memo<VisualizerProps>(({ result, container, box, pallet, layerConfig, box2, pallet2, layerConfig2, materials, onToggleFullscreen, isFullscreen }) => {
+export const Visualizer = React.memo<VisualizerProps>(({ result, container, box, pallet, layerConfig, box2, pallet2, layerConfig2, materials, onToggleFullscreen, isFullscreen, activeMaterialId, onUpdateMaterialColor }) => {
     const [isMobile, setIsMobile] = React.useState(window.innerWidth < 768);
     const [viewMode, setViewMode] = React.useState<'linear' | 'parallel' | 'grid'>('linear');
+    const [showColorPicker, setShowColorPicker] = React.useState(false);
+    const [monotoneMode, setMonotoneMode] = React.useState(false);
 
     const toggleViewMode = () => {
         if (viewMode === 'linear') setViewMode('parallel');
@@ -359,7 +367,7 @@ export const Visualizer = React.memo<VisualizerProps>(({ result, container, box,
         return () => window.removeEventListener('resize', handleResize);
     }, []);
     // Debug logs
-    console.log('Visualizer rendering. Result:', result);
+
 
     // Memoize loads to prevent unnecessary Canvas recreation (CRITICAL FIX)
     const stableLoads = useMemo(() => {
@@ -421,6 +429,49 @@ export const Visualizer = React.memo<VisualizerProps>(({ result, container, box,
             >
                 Cntr View: {viewMode.charAt(0).toUpperCase() + viewMode.slice(1)}
             </button>
+
+            {/* Color Picker Button (Above View Toggle) */}
+            {onUpdateMaterialColor && activeMaterialId && (
+                <div className="absolute bottom-16 left-4 z-20">
+                    <button
+                        onClick={() => setShowColorPicker(!showColorPicker)}
+                        className="bg-white/10 backdrop-blur p-2 rounded-lg text-white hover:bg-white/20 transition-colors border border-white/20 shadow-lg"
+                        title="Change Material Color"
+                    >
+                        <Palette className="w-5 h-5" />
+                    </button>
+                    {showColorPicker && (
+                        <div className="absolute bottom-full left-0 mb-2 p-3 bg-white rounded-lg shadow-xl border border-gray-200 w-64 animate-in fade-in zoom-in duration-200">
+                            <div className="text-xs font-semibold text-gray-500 mb-2">Select Color</div>
+                            <div className="grid grid-cols-6 gap-2">
+                                {PASTEL_PALETTE.map((color) => (
+                                    <button
+                                        key={color}
+                                        className="w-8 h-8 rounded-full border border-gray-100 hover:scale-110 transition-transform shadow-sm"
+                                        style={{ backgroundColor: color }}
+                                        onClick={() => {
+                                            onUpdateMaterialColor(activeMaterialId, color);
+                                            setShowColorPicker(false);
+                                        }}
+                                        title={color}
+                                    />
+                                ))}
+                            </div>
+                            {/* Monotone Toggle */}
+                            <button
+                                onClick={() => setMonotoneMode(!monotoneMode)}
+                                className={`w-full mt-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all border ${monotoneMode
+                                        ? 'bg-indigo-500 text-white border-indigo-600 shadow-md'
+                                        : 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200'
+                                    }`}
+                                title="When enabled, Top-Up and Full-Mix boxes use the same color as the base material"
+                            >
+                                {monotoneMode ? '● Monotone ON' : '○ Monotone OFF'}
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
 
             <Canvas
                 key="main-canvas" // Stable key to prevent recreation
@@ -498,13 +549,24 @@ export const Visualizer = React.memo<VisualizerProps>(({ result, container, box,
 
                                     if (!matBox) return null;
 
-                                    const normalItems = items.filter(i => !i.isFlatTopOff);
+                                    const normalItems = items.filter(i => !i.isFlatTopOff && i.source !== 'FULL_MIX');
                                     const topOffItems = items.filter(i => i.isFlatTopOff);
+                                    const fullMixItems = items.filter(i => i.source === 'FULL_MIX');
 
                                     const getLighterColor = (hex: string) => {
                                         try {
                                             const c = new THREE.Color(hex);
                                             c.offsetHSL(0, 0, 0.3);
+                                            return '#' + c.getHexString();
+                                        } catch (e) {
+                                            return hex;
+                                        }
+                                    };
+
+                                    const getDarkerColor = (hex: string) => {
+                                        try {
+                                            const c = new THREE.Color(hex);
+                                            c.offsetHSL(0, 0, -0.2); // 20% darker
                                             return '#' + c.getHexString();
                                         } catch (e) {
                                             return hex;
@@ -534,7 +596,19 @@ export const Visualizer = React.memo<VisualizerProps>(({ result, container, box,
                                                     box={matBox}
                                                     pallet={matPallet}
                                                     layerConfig={matConfig}
-                                                    color={getLighterColor(matBox.color)}
+                                                    color={monotoneMode ? matBox.color : getLighterColor(matBox.color)}
+                                                />
+                                            )}
+                                            {fullMixItems.length > 0 && (
+                                                <Boxes
+                                                    key={`${mid}-fullmix`}
+                                                    items={fullMixItems}
+                                                    containerDims={container.dimensions}
+                                                    offset={[xOffset, 0, zOffset]}
+                                                    box={matBox}
+                                                    pallet={matPallet}
+                                                    layerConfig={matConfig}
+                                                    color={monotoneMode ? matBox.color : getDarkerColor(matBox.color)}
                                                 />
                                             )}
                                         </React.Fragment>

@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { InputPanel, Visualizer, BatchProcessor } from '@stuffing-calc/ui';
-import { DebugPanel } from './components/DebugPanel';
 import { calculatePacking } from '@stuffing-calc/core';
 import type { Container, PackingResult, Material, PackingMode } from '@stuffing-calc/core';
 import { X, FileText, DollarSign, Scale, Minus, Maximize2 } from 'lucide-react';
@@ -43,6 +42,19 @@ function App() {
   // Results Panel State
   const [resultsMinimized, setResultsMinimized] = useState(false);
 
+  // Settings Tracker (from InputPanel)
+  const [currentSettings, setCurrentSettings] = useState<{
+    container: Container;
+    materials: Material[];
+    packingMode: PackingMode;
+    margins: { length: number; width: number; height: number };
+    enableTopUp: boolean;
+    enableFullMix: boolean;
+    fullMixRotations: { x: boolean; y: boolean; z: boolean };
+    activeMaterial?: Material;
+  } | null>(null);
+
+  const [pendingColorUpdate, setPendingColorUpdate] = useState<{ id: number; color: string } | null>(null);
 
   const [isCalculating, setIsCalculating] = useState(false);
 
@@ -80,7 +92,7 @@ function App() {
         fullMixRotations
       );
 
-      console.log('Calculation result:', newResult);
+
 
       setPackingResult(() => {
         // Always update result to ensure visualizer reflects changes in position/layout
@@ -144,8 +156,12 @@ function App() {
     const firstMat = currentMaterials.find(m => m.active);
     if (!firstMat) return;
 
-    let data = "Container\t20ft\t40ft\t40ftHC\t53ft\n";
-    data += "Items per full";
+    // Use current settings if available, else defaults
+    const margin = currentSettings?.margins || { length: 20, width: 20, height: 20 };
+    const mode = currentSettings?.packingMode || 'SEQUENTIAL';
+    const topUp = currentSettings?.enableTopUp || false;
+    const fullMix = currentSettings?.enableFullMix || false;
+    const rotations = currentSettings?.fullMixRotations;
 
     const results = CONTAINER_TYPES.map(cont => {
       // Create a temp material with large quantity
@@ -155,8 +171,11 @@ function App() {
         cont,
         [tempMat],
         false,
-        { length: 20, width: 20, height: 20 },
-        'SEQUENTIAL'
+        margin,
+        mode,
+        topUp,
+        fullMix,
+        rotations
       );
 
       // Find the item count of the first load (which should be full)
@@ -246,7 +265,12 @@ function App() {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden">
-      <InputPanel onCalculate={handleCalculate} />
+      <InputPanel
+        onCalculate={handleCalculate}
+        optimizations={packingResult?.optimizationsAvailable}
+        onSettingsChange={setCurrentSettings}
+        pendingColorUpdate={pendingColorUpdate}
+      />
 
       {/* Visualizer Wrapper with Transition */}
       <div className={`flex-1 relative transition-opacity duration-200 ${isCalculating ? 'opacity-60' : 'opacity-100'}`}>
@@ -262,6 +286,8 @@ function App() {
           layerConfig2={currentMaterials[1]?.layerConfig}
           // New prop for multi-material support
           materials={currentMaterials}
+          activeMaterialId={currentSettings?.activeMaterial?.id}
+          onUpdateMaterialColor={(id, color) => setPendingColorUpdate({ id, color })}
         />
 
         {/* Loading Overlay */}
@@ -393,7 +419,10 @@ function App() {
 
         {/* Batch Processor Modal */}
         {showBatchModal && (
-          <BatchProcessor onClose={() => setShowBatchModal(false)} />
+          <BatchProcessor
+            onClose={() => setShowBatchModal(false)}
+            currentSettings={currentSettings}
+          />
         )}
 
         {/* All Containers Modal */}

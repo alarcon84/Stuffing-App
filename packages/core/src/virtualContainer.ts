@@ -25,10 +25,15 @@ export interface PassResult {
  * Find vertical space above a load (for TOP_UP pass)
  * Returns virtual containers representing top surfaces
  */
+/**
+ * Find vertical space above a load (for TOP_UP & SMART_STACK passes)
+ * Returns virtual containers representing top surfaces using Skyline algorithm
+ */
 export function findTopSurfaces(
     load: ContainerLoad,
     containerDims: Dimensions,
-    margins: { length?: number; width?: number; height?: number }
+    margins: { length?: number; width?: number; height?: number },
+    yRangeFilter?: { min: number; max: number }
 ): VirtualContainer[] {
     const marginL = margins.length ?? 20;
     const marginW = margins.width ?? 20;
@@ -36,33 +41,97 @@ export function findTopSurfaces(
 
     const virtualContainers: VirtualContainer[] = [];
 
+    // If empty, the whole container (above margins) is technically a "top surface" relative to floor?
+    // No, if empty, SmartStack usually relies on sequential pack.
+    // But if we want to be robust, an empty load has 1 massive top surface from floor.
     if (load.items.length === 0) {
-        return virtualContainers; // No top surfaces if empty
+        // For Smart Stack, if a container is empty, we might want to return the whole space?
+        // But usually packSequential handles empty.
+        // Let's stick to "above items" logic. If no items, no top surfaces to stack ON.
+        return virtualContainers;
     }
 
-    // Find the highest Y position (top of the load)
-    let maxY = 0;
+    // --- Skyline Analysis ---
+    // Divide length into segments to find uneven tops
+    const SEGMENT_SIZE = 50; // mm
+    const totalLength = containerDims.length - marginL;
+    const numSegments = Math.ceil(totalLength / SEGMENT_SIZE);
+
+    // Initialize skyline with 0 (floor relative to load items?)
+    // Actually, we want to find space ABOVE items.
+    // If a segment has NO items, the "top" is floor (marginH).
+    // If it has items, "top" is the max Y of items in that segment.
+    const skyline = new Array(numSegments).fill(marginH);
+
     load.items.forEach(item => {
-        const topY = item.position[1] + item.dimensions.height / 2;
-        if (topY > maxY) maxY = topY;
+        const itemTopY = item.position[1] + item.dimensions.height / 2;
+        const itemStart = item.position[0] - item.dimensions.length / 2;
+        const itemEnd = item.position[0] + item.dimensions.length / 2;
+
+        const startSeg = Math.max(0, Math.floor((itemStart - marginL) / SEGMENT_SIZE));
+        const endSeg = Math.min(numSegments - 1, Math.floor((itemEnd - marginL) / SEGMENT_SIZE));
+
+        for (let i = startSeg; i <= endSeg; i++) {
+            if (itemTopY > skyline[i]) {
+                skyline[i] = itemTopY;
+            }
+        }
     });
 
-    // Calculate available height above the load
-    const availableHeight = (containerDims.height - marginH) - maxY;
+    // Group segments into regions
+    interface SkylineRegion {
+        startSeg: number;
+        endSeg: number;
+        height: number;
+    }
 
-    // Only create virtual container if there's meaningful space
-    if (availableHeight > 1) { // Minimum 1mm
-        virtualContainers.push({
+    const regions: SkylineRegion[] = [];
+    if (numSegments > 0) {
+        let currentRegion: SkylineRegion = { startSeg: 0, endSeg: 0, height: skyline[0] };
+
+        for (let i = 1; i < numSegments; i++) {
+            // Tolerance for "same height"
+            if (Math.abs(skyline[i] - currentRegion.height) < 10) {
+                currentRegion.endSeg = i;
+            } else {
+                regions.push(currentRegion);
+                currentRegion = { startSeg: i, endSeg: i, height: skyline[i] };
+            }
+        }
+        regions.push(currentRegion);
+    }
+
+    // Convert regions to Virtual Containers
+    for (const region of regions) {
+        const availableHeight = (containerDims.height - marginH) - region.height;
+
+        // Filter out unusable spaces
+        if (availableHeight < 50) continue; // Minimum useful height
+
+        const regionStart = marginL + (region.startSeg * SEGMENT_SIZE);
+        const regionEnd = marginL + ((region.endSeg + 1) * SEGMENT_SIZE);
+        const regionLength = regionEnd - regionStart;
+
+        if (regionLength < 50) continue; // Minimum useful length
+
+        const vc: VirtualContainer = {
             origin: {
-                x: marginL,
-                y: maxY,
+                x: regionStart,
+                y: region.height,
                 z: marginW
             },
-            length: containerDims.length - marginL * 2,
+            length: regionLength,
             width: containerDims.width - marginW * 2,
             height: availableHeight,
             realContainerId: load.id
-        });
+        };
+
+        // Y-range filter: skip VCs below this material's Y-floor
+        if (yRangeFilter && vc.origin.y < yRangeFilter.min) {
+            continue;
+        }
+
+        virtualContainers.push(vc);
     }
 
     return virtualContainers;
@@ -76,7 +145,8 @@ export function findRemainingSpaces(
     load: ContainerLoad,
     containerDims: Dimensions,
     margins: { length?: number; width?: number; height?: number },
-    excludeTop: boolean = false
+    excludeTop: boolean = false,
+    yRangeFilter?: { min: number; max: number }
 ): VirtualContainer[] {
     const marginL = margins.length ?? 20;
     const marginW = margins.width ?? 20;
@@ -121,29 +191,62 @@ export function findRemainingSpaces(
     }
 
     // 2. Top space (vertical) - Only if NOT excluded
+    // Constrain to footprint of items that actually reach maxY to prevent floating
     if (!excludeTop) {
         const topHeight = (containerDims.height - marginH) - maxY;
         if (topHeight > 1) {
+            // Find "safe" extent — only where items reach maxY
+            let safeTopX = 0;
+            let safeTopZ = 0;
+            const tolerance = 50;
+
+            load.items.forEach(item => {
+                const itemTopY = item.position[1] + item.dimensions.height / 2;
+                if (itemTopY >= maxY - tolerance) {
+                    const rx = item.position[0] + item.dimensions.length / 2;
+                    const rz = item.position[2] + item.dimensions.width / 2;
+                    if (rx > safeTopX) safeTopX = rx;
+                    if (rz > safeTopZ) safeTopZ = rz;
+                }
+            });
+
+            if (safeTopX <= marginL) safeTopX = maxX;
+            if (safeTopZ <= marginW) safeTopZ = maxZ;
+
+            const safeLength = safeTopX - marginL;
+            const safeWidth = safeTopZ - marginW;
+
+            if (safeLength > 1 && safeWidth > 1) {
+                virtualContainers.push({
+                    origin: { x: marginL, y: maxY, z: marginW },
+                    length: safeLength,
+                    width: safeWidth,
+                    height: topHeight,
+                    realContainerId: load.id
+                });
+            }
+        }
+    }
+
+    // 3. Side space (along width) - only if load doesn't use full width
+    // Constrain length to occupied extent to prevent floating boxes
+    const sideWidth = (containerDims.width - marginW) - maxZ;
+    if (sideWidth > 1) {
+        const occupiedLengthForSide = maxX - marginL;
+        if (occupiedLengthForSide > 1) {
             virtualContainers.push({
-                origin: { x: marginL, y: maxY, z: marginW },
-                length: containerDims.length - marginL * 2,
-                width: containerDims.width - marginW * 2,
-                height: topHeight,
+                origin: { x: marginL, y: marginH, z: maxZ },
+                length: occupiedLengthForSide,
+                width: sideWidth,
+                height: containerDims.height - marginH * 2,
                 realContainerId: load.id
             });
         }
     }
 
-    // 3. Side space (along width) - only if load doesn't use full width
-    const sideWidth = (containerDims.width - marginW) - maxZ;
-    if (sideWidth > 1) {
-        virtualContainers.push({
-            origin: { x: marginL, y: marginH, z: maxZ },
-            length: containerDims.length - marginL * 2,
-            width: sideWidth,
-            height: containerDims.height - marginH * 2,
-            realContainerId: load.id
-        });
+    // Y-range filter: remove VCs whose origin.y is below this material's Y-floor
+    if (yRangeFilter) {
+        return virtualContainers.filter(vc => vc.origin.y >= yRangeFilter!.min);
     }
 
     return virtualContainers;

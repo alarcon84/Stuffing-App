@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-background text-foreground overflow-x-hidden font-sans selection:bg-accent selection:text-white;
+  }
+}
+
+@layer utilities {
+  .noise-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 50;
+    opacity: 0.05;
+  }
+}
+
+.magnetic-button {
+  @apply relative overflow-hidden transition-all duration-300;
+  transition-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.magnetic-button:hover {
+  transform: scale(1.03) translateY(-1px);
+}
+.magnetic-button .hover-layer {
+  @apply absolute inset-0 bg-accent translate-y-[101%] transition-transform duration-500 ease-[cubic-bezier(0.19,1,0.22,1)] z-0;
+}
+.magnetic-button:-active {
+  transform: scale(0.98);
+}
+.magnetic-button:hover .hover-layer {
+  @apply translate-y-0;
+}
+.magnetic-button > span {
+  @apply relative z-10 transition-colors duration-300;
+}
+.magnetic-button:hover > span {
+  @apply text-white;
+}
+
+.link-hover {
+  @apply transition-transform duration-300;
+}
+.link-hover:hover {
+  transform: translateY(-1px);
+}

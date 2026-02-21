@@ -1,7 +1,8 @@
+
 import type { Container, Box, Dimensions } from './types';
 import { packGridCore, type GridVolume } from './packGridCore';
 
-export interface OrientationCandidate {
+interface OrientationCandidate {
     dimensions: Dimensions;
     count: number;
     unusedVolume: number;
@@ -19,22 +20,26 @@ export interface OrientationCandidate {
 export function selectBestOrientation(
     container: Container,
     box: Box,
-    allowedOrientations: Dimensions[]
-): Dimensions {
+    allowedOrientations: Dimensions[],
+    preference: 'default' | 'rotated' = 'default'
+): { selectedDimensions: Dimensions, optimization: { recommendedPreference: 'default' | 'rotated', countDiff: number } | null } {
     if (allowedOrientations.length === 0) {
-        // Fallback to original dimensions if no candidates provided
         return {
-            length: box.dimensions.length,
-            width: box.dimensions.width,
-            height: box.dimensions.height
+            selectedDimensions: box.dimensions,
+            optimization: null
         };
     }
 
     let bestCandidate: OrientationCandidate | null = null;
+    let fallbackCandidate: OrientationCandidate | null = null;
+
+    // Track candidates by orientation type for optimization checks
+    let defaultOrientation: OrientationCandidate | null = null; // Length >= Width
+    let rotatedOrientation: OrientationCandidate | null = null; // Width > Length
+
     const containerVolume = container.dimensions.length * container.dimensions.width * container.dimensions.height;
 
     // Define the full container volume for the kernel
-    // Origin is 0,0,0 because we are just counting theoretical capacity
     const volume: GridVolume = {
         origin: { x: 0, y: 0, z: 0 },
         bounds: {
@@ -59,25 +64,64 @@ export function selectBestOrientation(
             unusedVolume
         };
 
-        if (!bestCandidate) {
-            bestCandidate = candidate;
-            continue;
-        }
-
-        // Rule 1: Highest count wins
-        if (candidate.count > bestCandidate.count) {
-            bestCandidate = candidate;
-            continue;
-        }
-
-        // Rule 2: Tie -> Lowest unused volume wins
-        if (candidate.count === bestCandidate.count) {
-            if (candidate.unusedVolume < bestCandidate.unusedVolume) {
-                bestCandidate = candidate;
+        // Classify candidate
+        // Default: Face walls (Length >= Width)
+        // Rotated: Becomes "depth" (Width > Length)
+        if (dims.length >= dims.width) {
+            if (!defaultOrientation || count > defaultOrientation.count || (count === defaultOrientation.count && unusedVolume < defaultOrientation.unusedVolume)) {
+                defaultOrientation = candidate;
             }
-            // Rule 3: Tie -> Keep existing (stable)
+        } else {
+            if (!rotatedOrientation || count > rotatedOrientation.count || (count === rotatedOrientation.count && unusedVolume < rotatedOrientation.unusedVolume)) {
+                rotatedOrientation = candidate;
+            }
+        }
+
+        // Keep track of absolute best for fallback
+        if (!fallbackCandidate) {
+            fallbackCandidate = candidate;
+        } else if (candidate.count > fallbackCandidate.count) {
+            fallbackCandidate = candidate;
+        } else if (candidate.count === fallbackCandidate.count && candidate.unusedVolume < fallbackCandidate.unusedVolume) {
+            fallbackCandidate = candidate;
         }
     }
 
-    return bestCandidate!.dimensions;
+    // Selection Logic based on Preference
+    const pref = preference || 'default';
+
+    if (pref === 'default') {
+        bestCandidate = defaultOrientation;
+    } else {
+        bestCandidate = rotatedOrientation;
+    }
+
+    // If preferred orientation is impossible (not allowed or doesn't fit), fallback to the other
+    if (!bestCandidate) {
+        bestCandidate = pref === 'default' ? rotatedOrientation : defaultOrientation;
+    }
+
+    // If still nothing (e.g. neither fit), fallback to absolute best or input
+    if (!bestCandidate) {
+        return {
+            selectedDimensions: fallbackCandidate ? fallbackCandidate.dimensions : allowedOrientations[0],
+            optimization: null
+        };
+    }
+
+    // Optimization Check
+    // If we selected 'default' but 'rotated' has MORE items, suggest it.
+    // If we selected 'rotated' but 'default' has MORE items, suggest it.
+    let optimization: { recommendedPreference: 'default' | 'rotated', countDiff: number } | null = null;
+
+    if (pref === 'default' && rotatedOrientation && bestCandidate && rotatedOrientation.count > bestCandidate.count) {
+        optimization = { recommendedPreference: 'rotated', countDiff: rotatedOrientation.count - bestCandidate.count };
+    } else if (pref === 'rotated' && defaultOrientation && bestCandidate && defaultOrientation.count > bestCandidate.count) {
+        optimization = { recommendedPreference: 'default', countDiff: defaultOrientation.count - bestCandidate.count };
+    }
+
+    return {
+        selectedDimensions: bestCandidate.dimensions,
+        optimization
+    };
 }

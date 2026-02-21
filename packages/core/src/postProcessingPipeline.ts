@@ -4,19 +4,71 @@ import { runTopUpPass } from './passes/topUpPass';
 import { runFullMixPass } from './passes/fullMixPass';
 
 /**
- * Run the Post-Processing Pipeline (TOP_UP -> FULL_MIX)
- * 
- * STRICT IMPLEMENTATION (User Mental Model):
- * 1. Default Stuffing is Authoritative.
- * 2. If Partial -> STOP.
- * 3. Top-Up (Locked, Flat).
- * 4. Full-Mix (Unlocked, Any Orientation, Remaining Space).
+ * Post-Processing Pipeline — Strict Sequential Multi-Material Flow
+ *
+ * RULES (KERNEL_CONTRACT + Sequential Mode):
+ *   1. Material processing order is strictly M1 → M2 → M3. Never altered.
+ *   2. In Sequential mode, later materials (materialIndex > 0) are spatially
+ *      confined to their own Y-region via `yRangeFilter`. They only receive
+ *      Virtual Containers whose origin.y ≥ their base-pack Y-floor, so they
+ *      can NEVER steal vertical gaps that belong to earlier materials.
+ *   3. TopUp skip is MATERIAL-SPECIFIC: only skip if THIS material already
+ *      has TopUp items in the load (not any material’s TopUp items).
+ *   4. trimLoad NEVER removes items from other materials.
+ *   5. packGridCore remains the sole coordinate source.
+ *   6. Determinism: same inputs = identical output.
+ *
+ * PIPELINE ORDER PER LOAD:
+ *   A. TOP_UP  (locked flat layer on top, Y-region filtered in Sequential mode)
+ *   B. FULL_MIX (unlocked, any orientation, remaining voids, Y-region filtered)
+ *
+ * MATERIAL Y-REGION ISOLATION (Sequential mode only):
+ *   For materialIndex > 0, we compute [myYMin, myYMax] from the base-packed items
+ *   of this material in each load, then pass it as `yRangeFilter` to both passes.
+ *   This makes findRemainingSpaces / findTopSurfaces only return VCs starting at or
+ *   above the material’s own packing floor, enforcing strict visual layers.
  */
 
 export interface PipelineResult {
     loads: ContainerLoad[];
     totalItemsAdded: number;
     addedVolume: number;
+}
+
+/** Y-region filter: only VCs whose origin.y is within [min, max) are eligible */
+export interface YRangeFilter {
+    min: number;
+    max: number;
+}
+
+/**
+ * Returns the lowest item-bottom Y for a specific material in the load.
+ * If no items exist for this material, returns 0.
+ */
+function findMinYOfMaterial(load: ContainerLoad, materialId: number): number {
+    let minY = Infinity;
+    for (const item of load.items) {
+        if (item.materialId !== materialId) continue;
+        if (item.source && item.source !== 'DEFAULT') continue; // only base-packed items
+        const bottom = item.position[1] - item.dimensions.height / 2;
+        if (bottom < minY) minY = bottom;
+    }
+    return minY === Infinity ? 0 : minY;
+}
+
+/**
+ * Returns the highest item-top Y for a specific material in the load.
+ * If no items exist for this material, returns 0.
+ */
+function findMaxYOfMaterial(load: ContainerLoad, materialId: number): number {
+    let maxY = 0;
+    for (const item of load.items) {
+        if (item.materialId !== materialId) continue;
+        if (item.source && item.source !== 'DEFAULT') continue; // only base-packed items
+        const top = item.position[1] + item.dimensions.height / 2;
+        if (top > maxY) maxY = top;
+    }
+    return maxY;
 }
 
 export function runPostProcessingPipeline(
@@ -26,8 +78,12 @@ export function runPostProcessingPipeline(
     margins: { length?: number; width?: number; height?: number },
     enableTopUp: boolean,
     enableFullMix: boolean,
-    fullMixRotations?: import('./types').FullMixRotations
+    packingMode: import('./types').PackingMode,
+    fullMixRotations?: import('./types').FullMixRotations,
+    materialIndex: number = 0
 ): PipelineResult {
+    console.log(`\n[PIPELINE START] Material ${material.id} (idx=${materialIndex}), Loads=${initialLoads.length}, TopUp=${enableTopUp}, FullMix=${enableFullMix}`);
+
     const result: PipelineResult = {
         loads: [],
         totalItemsAdded: 0,
@@ -45,6 +101,7 @@ export function runPostProcessingPipeline(
         return result;
     }
 
+    const isSequential = packingMode === 'SEQUENTIAL';
 
     let totalPackedSoFar = 0;
 
@@ -60,56 +117,69 @@ export function runPostProcessingPipeline(
 
         // --- COMPACTION LOGIC ---
         // Calculate how many items are allowed in this load based on global quota
-        // If previous loads "stole" items via Top-Up/Full-Mix, we must reduce this load's base count.
         const quotaRemaining = material.quantity - totalPackedSoFar;
 
         // Trim the load if it exceeds the remaining quota
         updatedLoad = trimLoad(updatedLoad, material.id, quotaRemaining);
 
-        // If the load became empty due to trimming (fully stolen by previous loads), skip it?
-        // We should skip adding it to results if it's truly empty and has no other items.
-        // But for now, let's process it (it might have other materials in a mixed scenario, 
-        // though here we assume single-material pipeline focus).
-        // If strictly single material and empty, we might skip.
-        // But let's proceed to allow "Top Up" even on an empty container (if we had infinite quota, but we don't).
-
         // Calculate count strictly for THIS load (after trim)
         let currentLoadPackedCount = countPackedInLoad(updatedLoad, material.id);
+
+        // --- Y-REGION ISOLATION (Sequential mode, later materials) ---
+        // Compute the spatial Y-range that belongs to this material in this load.
+        // Pass this range to both passes so VCs outside the band are filtered out.
+        let yFilter: YRangeFilter | undefined;
+        if (isSequential && materialIndex > 0 && currentLoadPackedCount > 0) {
+            const myYMin = findMinYOfMaterial(updatedLoad, material.id);
+            const myYMax = findMaxYOfMaterial(updatedLoad, material.id) || container.dimensions.height;
+            yFilter = { min: myYMin, max: myYMax };
+        }
         let topSpaceOccupied = false;
         let itemsAddedInThisLoad = 0;
         let volumeAddedInThisLoad = 0;
 
         // --- PASS A: TOP_UP (Locked) ---
         if (enableTopUp) {
-            const packedBeforeTopUp = totalPackedSoFar + currentLoadPackedCount;
-            const remainingForTopUp = material.quantity - packedBeforeTopUp;
+            // Material-specific skip: only skip if THIS material already has TopUp items
+            const existingTopUpItems = updatedLoad.items.filter(
+                i => i.source === 'TOP_UP' && i.materialId === material.id
+            );
+            if (existingTopUpItems.length > 0) {
+                console.log(`[PIPELINE] C${i + 1}: Skipping TopUp for Mat${material.id} — ${existingTopUpItems.length} TOP_UP items already exist`);
+            } else {
 
-            if (remainingForTopUp > 0) {
-                const topUpResult = runTopUpPass(
-                    material,
-                    updatedLoad,
-                    container.dimensions,
-                    margins,
-                    remainingForTopUp,
-                    packedBeforeTopUp
-                );
+                const packedBeforeTopUp = totalPackedSoFar + currentLoadPackedCount;
+                const remainingForTopUp = material.quantity - packedBeforeTopUp;
 
-                if (topUpResult.placements.length > 0) {
-                    topSpaceOccupied = true;
-                    const placedCount = topUpResult.placements.reduce((sum, p) => sum + (p.itemCount || 1), 0);
-                    const placedVolume = topUpResult.placements.reduce((sum, p) => sum + (p.dimensions.length * p.dimensions.width * p.dimensions.height), 0);
+                if (remainingForTopUp > 0) {
+                    const topUpResult = runTopUpPass(
+                        material,
+                        updatedLoad,
+                        container.dimensions,
+                        margins,
+                        remainingForTopUp,
+                        packedBeforeTopUp,
+                        packingMode,
+                        yFilter
+                    );
 
-                    // Update Load
-                    updatedLoad = {
-                        ...updatedLoad,
-                        items: [...updatedLoad.items, ...topUpResult.placements],
-                        itemCount: updatedLoad.itemCount + placedCount
-                    };
+                    if (topUpResult.placements.length > 0) {
+                        topSpaceOccupied = true;
+                        const placedCount = topUpResult.placements.reduce((sum, p) => sum + (p.itemCount || 1), 0);
+                        const placedVolume = topUpResult.placements.reduce((sum, p) => sum + (p.dimensions.length * p.dimensions.width * p.dimensions.height), 0);
 
-                    // Update Local Stats
-                    itemsAddedInThisLoad += placedCount;
-                    volumeAddedInThisLoad += placedVolume;
-                    currentLoadPackedCount += placedCount; // Important for next pass
+                        // Update Load
+                        updatedLoad = {
+                            ...updatedLoad,
+                            items: [...updatedLoad.items, ...topUpResult.placements],
+                            itemCount: updatedLoad.itemCount + placedCount
+                        };
+
+                        // Update Local Stats
+                        itemsAddedInThisLoad += placedCount;
+                        volumeAddedInThisLoad += placedVolume;
+                        currentLoadPackedCount += placedCount; // Important for next pass
+                    }
                 }
             }
         }
@@ -118,6 +188,8 @@ export function runPostProcessingPipeline(
         if (enableFullMix) {
             const packedBeforeFullMix = totalPackedSoFar + currentLoadPackedCount;
             const remainingForFullMix = material.quantity - packedBeforeFullMix;
+
+            console.log(`[PIPELINE] C${i + 1}: FullMix check - remaining=${remainingForFullMix}, packedSoFar=${packedBeforeFullMix}, topSpaceOccupied=${topSpaceOccupied}`);
 
             if (remainingForFullMix > 0) {
                 const fullMixResult = runFullMixPass(
@@ -128,7 +200,9 @@ export function runPostProcessingPipeline(
                     remainingForFullMix,
                     packedBeforeFullMix,
                     topSpaceOccupied,
-                    fullMixRotations
+                    fullMixRotations,
+                    materialIndex,
+                    yFilter
                 );
 
                 if (fullMixResult.placements.length > 0) {
@@ -158,6 +232,11 @@ export function runPostProcessingPipeline(
         // Update Type
         updatedLoad.type = (currentLoadPackedCount + totalPackedSoFar >= material.quantity) ? 'full' : 'partial';
 
+        // [ORDER] log for later materials in Sequential mode
+        if (yFilter) {
+            console.log(`[ORDER] Material ${material.id} placed only in its Y-region [${yFilter.min.toFixed(0)}–${yFilter.max.toFixed(0)}] in C${i + 1}`);
+        }
+
         // Update Global Stats
         result.totalItemsAdded += itemsAddedInThisLoad;
         result.addedVolume += volumeAddedInThisLoad;
@@ -184,7 +263,7 @@ function countPackedInLoad(load: ContainerLoad, materialId: number): number {
 
 /**
  * Helper: Trim a load to a maximum number of items for a specific material.
- * Removes items from the end of the list.
+ * Removes items from the end of the list. NEVER touches other materials' items.
  */
 function trimLoad(load: ContainerLoad, materialId: number, maxItems: number): ContainerLoad {
     if (maxItems < 0) maxItems = 0;
@@ -195,12 +274,12 @@ function trimLoad(load: ContainerLoad, materialId: number, maxItems: number): Co
     let itemsToRemove = currentCount - maxItems;
     const newItems = [...load.items];
 
-    // Iterate backwards to remove items
+    // Iterate backwards to remove items (only of THIS material)
     for (let i = newItems.length - 1; i >= 0; i--) {
         if (itemsToRemove <= 0) break;
 
         const item = newItems[i];
-        if (item.materialId !== materialId) continue;
+        if (item.materialId !== materialId) continue; // PROTECT other materials
 
         const itemQty = item.itemCount || 1;
 
@@ -210,7 +289,6 @@ function trimLoad(load: ContainerLoad, materialId: number, maxItems: number): Co
             itemsToRemove -= itemQty;
         } else {
             // Reduce item count
-            // We need to clone the item to modify it safely
             newItems[i] = {
                 ...item,
                 itemCount: itemQty - itemsToRemove

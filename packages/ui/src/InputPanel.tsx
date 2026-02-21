@@ -13,6 +13,18 @@ interface InputPanelProps {
         enableFullMix?: boolean,
         fullMixRotations?: { x: boolean; y: boolean; z: boolean }
     ) => void;
+    optimizations?: import('@stuffing-calc/core').OptimizationResult[];
+    onSettingsChange?: (settings: {
+        container: Container;
+        materials: Material[];
+        packingMode: PackingMode;
+        margins: { length: number; width: number; height: number };
+        enableTopUp: boolean;
+        enableFullMix: boolean;
+        fullMixRotations: { x: boolean; y: boolean; z: boolean };
+        activeMaterial?: Material;
+    }) => void;
+    pendingColorUpdate?: { id: number; color: string } | null;
 }
 
 const CONTAINER_TYPES: Container[] = [
@@ -33,10 +45,17 @@ const COLORS = [
     '#06b6d4', // Cyan
     '#84cc16', // Lime
     '#f97316', // Orange
+    '#f97316', // Orange
     '#6366f1', // Indigo
 ];
 
-export const InputPanel: React.FC<InputPanelProps> = ({ onCalculate }) => {
+export const PASTEL_PALETTE = [
+    '#fca5a5', '#fdba74', '#fcd34d', '#86efac', '#6ee7b7', '#5eead4', '#7dd3fc', '#93c5fd', '#a5b4fc', '#c4b5fd', '#f0abfc', '#f9a8d4',
+    '#fda4af', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#ec4899',
+    '#ef4444', '#f59e0b', '#84cc16', '#10b981', '#64748b', '#71717a'
+];
+
+export const InputPanel: React.FC<InputPanelProps> = ({ onCalculate, optimizations, onSettingsChange, pendingColorUpdate }) => {
     // --- State ---
     const [materials, setMaterials] = useState<Material[]>([
         {
@@ -48,9 +67,10 @@ export const InputPanel: React.FC<InputPanelProps> = ({ onCalculate }) => {
                 id: 'box-1',
                 materialId: 1,
                 dimensions: { length: 1600, width: 175, height: 800 },
-                color: COLORS[0],
+                color: '#fcd34d',
                 allowedRotations: { x: false, y: true, z: false }
             },
+            orientationPreference: 'default', // Default to face walls
             pallet: {
                 dimensions: { length: 1600, width: 1050, height: 150 },
                 maxLoadHeight: 2650,
@@ -88,9 +108,31 @@ export const InputPanel: React.FC<InputPanelProps> = ({ onCalculate }) => {
     const [showOptimizationModal, setShowOptimizationModal] = useState(false);
     const [optimizingMaterialId, setOptimizingMaterialId] = useState<number | null>(null);
     const [isOptimizing, setIsOptimizing] = useState(false);
+    const [showMargins, setShowMargins] = useState(false);
+    // const [showColorPicker, setShowColorPicker] = useState(false); // Moved to Visualizer
 
     // --- Helpers ---
     const activeMaterial = materials.find(m => m.id === activeTabId) || materials[0];
+
+    // --- Handlers ---
+
+
+
+    // --- Broadcast Settings Change ---
+    React.useEffect(() => {
+        if (onSettingsChange) {
+            onSettingsChange({
+                container,
+                materials,
+                packingMode,
+                margins,
+                enableTopUp,
+                enableFullMix,
+                fullMixRotations,
+                activeMaterial
+            });
+        }
+    }, [container, materials, packingMode, margins, enableTopUp, enableFullMix, fullMixRotations, activeMaterial, onSettingsChange]);
 
     const updateMaterial = (id: number, updates: Partial<Material>) => {
         setMaterials(prev => prev.map(m => m.id === id ? { ...m, ...updates } : m));
@@ -106,6 +148,16 @@ export const InputPanel: React.FC<InputPanelProps> = ({ onCalculate }) => {
             box: { ...m.box, dimensions: { ...m.box.dimensions, [key]: value } }
         } : m));
     };
+
+    // --- Sync Color from Visualizer ---
+    React.useEffect(() => {
+        if (pendingColorUpdate) {
+            setMaterials(prev => prev.map(m => m.id === pendingColorUpdate.id ? {
+                ...m,
+                box: { ...m.box, color: pendingColorUpdate.color }
+            } : m));
+        }
+    }, [pendingColorUpdate]);
 
     const updatePallet = (matId: number, updates: Partial<Pallet>) => {
         setMaterials(prev => prev.map(m => m.id === matId ? { ...m, pallet: { ...m.pallet, ...updates } } : m));
@@ -140,6 +192,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ onCalculate }) => {
                     color: COLORS[(nextId - 1) % COLORS.length],
                     allowedRotations: { x: false, y: true, z: false }
                 },
+                orientationPreference: 'default',
                 pallet: {
                     dimensions: { length: 1200, width: 1000, height: 150 },
                     maxLoadHeight: container.dimensions.height - 50,
@@ -345,6 +398,23 @@ export const InputPanel: React.FC<InputPanelProps> = ({ onCalculate }) => {
         setShowOptimizationModal(false);
     };
 
+    // --- Optimization (Orientation) ---
+    const activeOptimization = optimizations?.find(o => o.materialId === activeMaterial.id);
+
+    const handleApplyOptimization = () => {
+        if (activeOptimization) {
+            updateMaterial(activeMaterial.id, { orientationPreference: activeOptimization.recommendedPreference });
+            setTimeout(handleRecalculate, 0);
+        }
+    };
+
+    const handleRotateToggle = () => {
+        const currentPref = activeMaterial.orientationPreference || 'default';
+        const newPref = currentPref === 'default' ? 'rotated' : 'default';
+        updateMaterial(activeMaterial.id, { orientationPreference: newPref });
+        setTimeout(handleRecalculate, 0);
+    };
+
     // --- Container Edit ---
     const handleContainerDimensionChange = (index: number, key: keyof Dimensions, value: number) => {
         setEditableContainers(prev => {
@@ -402,48 +472,103 @@ export const InputPanel: React.FC<InputPanelProps> = ({ onCalculate }) => {
                     <span>W: {container.dimensions.width}</span>
                     <span>H: {container.dimensions.height}</span>
                 </div>
-
-                {/* Margins */}
-                <div className="bg-white p-2 rounded border border-gray-200">
-                    <div className="text-xs font-medium text-gray-500 mb-1">Margins (mm)</div>
-                    <div className="grid grid-cols-3 gap-2">
-                        <div>
-                            <label className="text-[10px] text-gray-400 block">Length</label>
-                            <input
-                                type="number"
-                                value={margins.length}
-                                onChange={(e) => setMargins({ ...margins, length: parseInt(e.target.value) || 0 })}
-                                onKeyDown={handleKeyDown}
-                                className="w-full p-1 border rounded text-sm"
-                            />
-                        </div>
-                        <div>
-                            <label className="text-[10px] text-gray-400 block">Width</label>
-                            <input
-                                type="number"
-                                value={margins.width}
-                                onChange={(e) => setMargins({ ...margins, width: parseInt(e.target.value) || 0 })}
-                                onKeyDown={handleKeyDown}
-                                className="w-full p-1 border rounded text-sm"
-                            />
-                        </div>
-                        <div>
-                            <label className="text-[10px] text-gray-400 block">Height</label>
-                            <input
-                                type="number"
-                                value={margins.height}
-                                onChange={(e) => setMargins({ ...margins, height: parseInt(e.target.value) || 0 })}
-                                onKeyDown={handleKeyDown}
-                                className="w-full p-1 border rounded text-sm"
-                            />
-                        </div>
-                    </div>
-                </div>
             </section>
+
+            {/* Post-Processing Passes — MOVED TO TOP */}
+            <div className="bg-white p-3 rounded border border-gray-200 space-y-2">
+                <div className="text-xs font-medium text-gray-500 mb-2">Space Optimization</div>
+
+                <label className="flex items-start gap-2 cursor-pointer hover:bg-gray-50 p-1.5 rounded transition-colors">
+                    <input
+                        type="checkbox"
+                        checked={enableTopUp}
+                        onChange={(e) => {
+                            const newValue = e.target.checked;
+                            setEnableTopUp(newValue);
+                            setTimeout(() => onCalculate(container, materials, packingMode, margins, newValue, enableFullMix, fullMixRotations), 0);
+                        }}
+                        className="mt-0.5"
+                    />
+                    <div className="flex-1">
+                        <div className="text-sm font-medium text-gray-700">Fill Vertical Space</div>
+                        <div className="text-xs text-gray-500">Add flat-oriented boxes above loads to use empty vertical space</div>
+                    </div>
+                </label>
+
+                <label className="flex items-start gap-2 cursor-pointer hover:bg-gray-50 p-1.5 rounded transition-colors">
+                    <input
+                        type="checkbox"
+                        checked={enableFullMix}
+                        onChange={(e) => {
+                            const newValue = e.target.checked;
+                            setEnableFullMix(newValue);
+                            setTimeout(() => onCalculate(container, materials, packingMode, margins, enableTopUp, newValue, fullMixRotations), 0);
+                        }}
+                        className="mt-0.5"
+                    />
+                    <div className="flex-1">
+                        <div className="text-sm font-medium text-gray-700">Maximize Space</div>
+                        <div className="text-xs text-gray-500">Aggressively fill all remaining spaces with best-fit orientations</div>
+
+                        {/* Full Mix Orientation Controls */}
+                        {enableFullMix && (
+                            <div className="mt-2 flex gap-3 items-center animate-in fade-in slide-in-from-top-1">
+                                <span className="text-xs font-semibold text-gray-500">Allowed:</span>
+                                <label className="flex items-center gap-1 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={fullMixRotations.x}
+                                        onChange={(e) => {
+                                            const newVal = { ...fullMixRotations, x: e.target.checked };
+                                            setFullMixRotations(newVal);
+                                            setTimeout(() => onCalculate(container, materials, packingMode, margins, enableTopUp, enableFullMix, newVal), 0);
+                                        }}
+                                        className="w-3 h-3 text-blue-600 rounded focus:ring-blue-500"
+                                    />
+                                    <span className="text-xs text-gray-600">Vert (V)</span>
+                                </label>
+                                <label className="flex items-center gap-1 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={fullMixRotations.y}
+                                        onChange={(e) => {
+                                            const newVal = { ...fullMixRotations, y: e.target.checked };
+                                            setFullMixRotations(newVal);
+                                            setTimeout(() => onCalculate(container, materials, packingMode, margins, enableTopUp, enableFullMix, newVal), 0);
+                                        }}
+                                        className="w-3 h-3 text-blue-600 rounded focus:ring-blue-500"
+                                    />
+                                    <span className="text-xs text-gray-600">Horiz (H)</span>
+                                </label>
+                                <label className="flex items-center gap-1 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={fullMixRotations.z}
+                                        onChange={(e) => {
+                                            const newVal = { ...fullMixRotations, z: e.target.checked };
+                                            setFullMixRotations(newVal);
+                                            setTimeout(() => onCalculate(container, materials, packingMode, margins, enableTopUp, enableFullMix, newVal), 0);
+                                        }}
+                                        className="w-3 h-3 text-blue-600 rounded focus:ring-blue-500"
+                                    />
+                                    <span className="text-xs text-gray-600">Flat (F)</span>
+                                </label>
+                            </div>
+                        )}
+                    </div>
+                </label>
+
+                {(enableTopUp || enableFullMix) && (
+                    <div className="flex gap-1 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-200 mt-2">
+                        <div className="mt-0.5">ℹ️</div>
+                        <div>Only applied to fully packed containers</div>
+                    </div>
+                )}
+            </div>
 
             {/* Packing Mode Selection */}
             <div className="flex flex-col gap-2 pb-4 border-b border-gray-200">
-                <h3 className="text-sm font-semibold text-gray-700">Packing Mode</h3>
+                <h3 className="text-sm font-semibold text-gray-700">Multi-Material Mode</h3>
                 <div className="flex flex-col gap-2">
                     <label className="flex items-start gap-2 cursor-pointer">
                         <input
@@ -455,7 +580,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ onCalculate }) => {
                             className="mt-1"
                         />
                         <span className="text-sm text-gray-700">
-                            <span className="font-medium">Sequential</span> – Pack materials independently (no mixing)
+                            <span className="font-medium">Sequential</span> – Materials share containers, no mixing
                         </span>
                     </label>
 
@@ -469,7 +594,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ onCalculate }) => {
                             className="mt-1"
                         />
                         <span className="text-sm text-gray-700">
-                            <span className="font-medium">Smart Stack</span> – Stack compatible materials vertically
+                            <span className="font-medium">Smart Stack</span> – Mix materials if space allows (with Fill/Maximize)
                         </span>
                     </label>
 
@@ -483,7 +608,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ onCalculate }) => {
                             className="mt-1 cursor-not-allowed"
                         />
                         <span className="text-sm text-gray-700">
-                            <span className="font-medium">Tetris (Experimental)</span> – Free-form packing (non-physical)
+                            <span className="font-medium">Tetris (Coming Soon)</span> – Free-form optimal packing
                         </span>
                     </label>
                 </div>
@@ -491,102 +616,58 @@ export const InputPanel: React.FC<InputPanelProps> = ({ onCalculate }) => {
                 {/* Visual Validation for SMART_STACK */}
                 {packingMode === 'SMART_STACK' && (
                     <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800 flex flex-col gap-1">
-                        <span className="font-bold flex items-center gap-1">ℹ️ Smart Stack Mode (Active)</span>
-                        <span>Materials may stack vertically if dimensions allow</span>
+                        <span className="font-bold flex items-center gap-1">ℹ️ Smart Stack Mode</span>
+                        <span>Materials fill remaining space in each other's containers when Fill or Maximize is enabled</span>
                     </div>
                 )}
+            </div>
 
-                {/* Pipeline Pass Options */}
-                <div className="bg-white p-3 rounded border border-gray-200 space-y-2 mt-3">
-                    <div className="text-xs font-medium text-gray-500 mb-2">Post-Processing Passes</div>
-
-                    <label className="flex items-start gap-2 cursor-pointer hover:bg-gray-50 p-1.5 rounded transition-colors">
-                        <input
-                            type="checkbox"
-                            checked={enableTopUp}
-                            onChange={(e) => {
-                                const newValue = e.target.checked;
-                                setEnableTopUp(newValue);
-                                setTimeout(() => onCalculate(container, materials, packingMode, margins, newValue, enableFullMix, fullMixRotations), 0);
-                            }}
-                            className="mt-0.5"
-                        />
-                        <div className="flex-1">
-                            <div className="text-sm font-medium text-gray-700">Fill Vertical Space</div>
-                            <div className="text-xs text-gray-500">Add flat-oriented boxes above loads to use empty vertical space</div>
+            {/* Margins — Collapsed by default */}
+            <div className="border-b border-gray-200 pb-3">
+                <button
+                    onClick={() => setShowMargins(!showMargins)}
+                    className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors w-full"
+                >
+                    <Settings className="w-3.5 h-3.5" />
+                    <span>Margins ({margins.length}/{margins.width}/{margins.height} mm)</span>
+                    <span className={`ml-auto text-xs transition-transform ${showMargins ? 'rotate-180' : ''}`}>▼</span>
+                </button>
+                {showMargins && (
+                    <div className="mt-2 bg-white p-2 rounded border border-gray-200 animate-in fade-in slide-in-from-top-1">
+                        <div className="grid grid-cols-3 gap-2">
+                            <div>
+                                <label className="text-[10px] text-gray-400 block">Length</label>
+                                <input
+                                    type="number"
+                                    value={margins.length}
+                                    onChange={(e) => setMargins({ ...margins, length: parseInt(e.target.value) || 0 })}
+                                    onKeyDown={handleKeyDown}
+                                    className="w-full p-1 border rounded text-sm"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] text-gray-400 block">Width</label>
+                                <input
+                                    type="number"
+                                    value={margins.width}
+                                    onChange={(e) => setMargins({ ...margins, width: parseInt(e.target.value) || 0 })}
+                                    onKeyDown={handleKeyDown}
+                                    className="w-full p-1 border rounded text-sm"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] text-gray-400 block">Height</label>
+                                <input
+                                    type="number"
+                                    value={margins.height}
+                                    onChange={(e) => setMargins({ ...margins, height: parseInt(e.target.value) || 0 })}
+                                    onKeyDown={handleKeyDown}
+                                    className="w-full p-1 border rounded text-sm"
+                                />
+                            </div>
                         </div>
-                    </label>
-
-                    <label className="flex items-start gap-2 cursor-pointer hover:bg-gray-50 p-1.5 rounded transition-colors">
-                        <input
-                            type="checkbox"
-                            checked={enableFullMix}
-                            onChange={(e) => {
-                                const newValue = e.target.checked;
-                                setEnableFullMix(newValue);
-                                setTimeout(() => onCalculate(container, materials, packingMode, margins, enableTopUp, newValue, fullMixRotations), 0);
-                            }}
-                            className="mt-0.5"
-                        />
-                        <div className="flex-1">
-                            <div className="text-sm font-medium text-gray-700">Maximize Space</div>
-                            <div className="text-xs text-gray-500">Aggressively fill all remaining spaces with best-fit orientations</div>
-
-                            {/* Full Mix Orientation Controls */}
-                            {enableFullMix && (
-                                <div className="mt-2 flex gap-3 items-center animate-in fade-in slide-in-from-top-1">
-                                    <span className="text-xs font-semibold text-gray-500">Allowed:</span>
-                                    <label className="flex items-center gap-1 cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={fullMixRotations.x}
-                                            onChange={(e) => {
-                                                const newVal = { ...fullMixRotations, x: e.target.checked };
-                                                setFullMixRotations(newVal);
-                                                setTimeout(() => onCalculate(container, materials, packingMode, margins, enableTopUp, enableFullMix, newVal), 0);
-                                            }}
-                                            className="w-3 h-3 text-blue-600 rounded focus:ring-blue-500"
-                                        />
-                                        <span className="text-xs text-gray-600">Vert (V)</span>
-                                    </label>
-                                    <label className="flex items-center gap-1 cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={fullMixRotations.y}
-                                            onChange={(e) => {
-                                                const newVal = { ...fullMixRotations, y: e.target.checked };
-                                                setFullMixRotations(newVal);
-                                                setTimeout(() => onCalculate(container, materials, packingMode, margins, enableTopUp, enableFullMix, newVal), 0);
-                                            }}
-                                            className="w-3 h-3 text-blue-600 rounded focus:ring-blue-500"
-                                        />
-                                        <span className="text-xs text-gray-600">Horiz (H)</span>
-                                    </label>
-                                    <label className="flex items-center gap-1 cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={fullMixRotations.z}
-                                            onChange={(e) => {
-                                                const newVal = { ...fullMixRotations, z: e.target.checked };
-                                                setFullMixRotations(newVal);
-                                                setTimeout(() => onCalculate(container, materials, packingMode, margins, enableTopUp, enableFullMix, newVal), 0);
-                                            }}
-                                            className="w-3 h-3 text-blue-600 rounded focus:ring-blue-500"
-                                        />
-                                        <span className="text-xs text-gray-600">Flat (F)</span>
-                                    </label>
-                                </div>
-                            )}
-                        </div>
-                    </label>
-
-                    {(enableTopUp || enableFullMix) && (
-                        <div className="flex gap-1 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-200 mt-2">
-                            <div className="mt-0.5">ℹ️</div>
-                            <div>Only applied to fully packed containers</div>
-                        </div>
-                    )}
-                </div>
+                    </div>
+                )}
             </div>
 
             {/* Materials Tabs */}
@@ -643,8 +724,8 @@ export const InputPanel: React.FC<InputPanelProps> = ({ onCalculate }) => {
             <div className="animate-in fade-in slide-in-from-bottom-2 space-y-6" onKeyDown={handleKeyDown}>
                 {/* Header Actions */}
                 <div className="flex justify-between items-center">
-                    <h2 className="font-bold text-gray-800" style={{ color: activeMaterial.box.color }}>
-                        Material {activeMaterial.id} Settings
+                    <h2 className="font-bold text-gray-800 flex items-center gap-2">
+                        <span style={{ color: activeMaterial.box.color }}>Material {activeMaterial.id} Settings</span>
                     </h2>
                     <div className="flex gap-2">
                         <button
@@ -720,9 +801,34 @@ export const InputPanel: React.FC<InputPanelProps> = ({ onCalculate }) => {
 
                 {/* Stacking Options */}
                 <section className="space-y-3">
-                    <h3 className="font-semibold text-gray-700 flex items-center gap-2 text-sm">
-                        <Settings className="w-4 h-4" /> Stacking Options
-                    </h3>
+                    <div className="flex justify-between items-center">
+                        <h3 className="font-semibold text-gray-700 flex items-center gap-2 text-sm">
+                            <Settings className="w-4 h-4" /> Stacking Options
+                        </h3>
+                        <div className="flex gap-2">
+                            {/* Optimization Button */}
+                            {activeOptimization && (
+                                <button
+                                    onClick={handleApplyOptimization}
+                                    className="px-2 py-1 text-xs font-bold text-white bg-green-500 rounded hover:bg-green-600 animate-pulse shadow-sm flex items-center gap-1"
+                                    title={`Optimize: Switch to ${activeOptimization.recommendedPreference} orientation`}
+                                >
+                                    <Wand2 className="w-3 h-3" /> Optimize
+                                </button>
+                            )}
+
+                            {/* Rotate Button */}
+                            <button
+                                onClick={handleRotateToggle}
+                                className="p-1 text-gray-500 hover:text-blue-600 border border-gray-200 rounded hover:bg-gray-50 transition-colors"
+                                title={`Rotate Orientation (Current: ${activeMaterial.orientationPreference || 'default'})`}
+                            >
+                                <div className={`transform transition-transform ${activeMaterial.orientationPreference === 'rotated' ? 'rotate-90' : ''}`}>
+                                    <BoxIcon className="w-4 h-4" />
+                                </div>
+                            </button>
+                        </div>
+                    </div>
                     <div className="bg-white p-2 rounded border border-gray-200">
                         <div className="flex justify-between gap-2">
                             <label className={`flex-1 flex flex-col items-center justify-center gap-2 p-2 rounded cursor-pointer border transition-colors ${activeMaterial.box.allowedRotations.x ? 'bg-blue-50 border-blue-200' : 'hover:bg-gray-50 border-transparent'}`}>

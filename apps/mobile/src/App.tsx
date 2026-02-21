@@ -57,7 +57,7 @@ function App() {
     setCurrentMaterials(materials);
 
     const result = calculatePacking(container, materials, false, margins, packingMode, enableTopUp, enableFullMix);
-    console.log('Calculation result:', result);
+
     setPackingResult(result);
   }, []);
 
