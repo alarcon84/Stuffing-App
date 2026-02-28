@@ -83,7 +83,8 @@ export function runPostProcessingPipeline(
     fullMixRotations?: import('./types').FullMixRotations,
     materialIndex: number = 0,
     allMaterials?: Material[],
-    globalVCQueue: import('./virtualContainer').VirtualContainer[] = []
+    globalVCQueue: import('./virtualContainer').VirtualContainer[] = [],
+    isStageDriven: boolean = false
 ): PipelineResult {
     console.log(`\n[PIPELINE START] Material ${material.id} (idx=${materialIndex}), Loads=${initialLoads.length}, TopUp=${enableTopUp}, FullMix=${enableFullMix}`);
 
@@ -107,7 +108,17 @@ export function runPostProcessingPipeline(
 
     const isSequential = packingMode === 'SEQUENTIAL';
 
-    let totalPackedSoFar = 0;
+    // --- GLOBAL PACKED COUNT (for stage-driven remaining calculation) ---
+    // In stage-driven mode, we compute remaining from actual loads instead of
+    // accumulating totalPackedSoFar across loads, which was unreliable.
+    const packedGlobalAtStart = isStageDriven
+        ? initialLoads
+            .flatMap(l => l.items)
+            .filter(i => i.materialId === material.id)
+            .reduce((s, i) => s + (i.itemCount || 1), 0)
+        : 0;
+
+    let totalPackedSoFar = isStageDriven ? packedGlobalAtStart : 0;
 
     for (let i = 0; i < initialLoads.length; i++) {
         const load = initialLoads[i];
@@ -119,12 +130,13 @@ export function runPostProcessingPipeline(
             updatedLoad.items = [];
         }
 
-        // --- COMPACTION LOGIC ---
-        // Calculate how many items are allowed in this load based on global quota
-        const quotaRemaining = material.quantity - totalPackedSoFar;
-
-        // Trim the load if it exceeds the remaining quota
-        updatedLoad = trimLoad(updatedLoad, material.id, quotaRemaining);
+        // --- COMPACTION LOGIC (legacy only) ---
+        // In stage-driven mode this is skipped: each stage's material is already
+        // scoped correctly by the driver; trimming here would remove valid items.
+        if (!isStageDriven) {
+            const quotaRemaining = material.quantity - totalPackedSoFar;
+            updatedLoad = trimLoad(updatedLoad, material.id, quotaRemaining);
+        }
 
         // Calculate count strictly for THIS load (after trim)
         let currentLoadPackedCount = countPackedInLoad(updatedLoad, material.id);

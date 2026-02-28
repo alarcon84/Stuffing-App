@@ -207,42 +207,36 @@ export function runFullMixPass(
         }
 
         // 2. Find the SINGLE BEST (VC, orientation) pair across ALL VCs
+        //
+        // STAGE-DRIVEN FIX: selectedMaterial is ALWAYS the current pass material.
+        // The old findBestMaterialForSpace() branch (SMART_STACK cross-material selection)
+        // is disabled. Smart behavior (filling prior VCs) is achieved by the stage
+        // driver passing accumulated currentLoads as initialLoads — not by picking a
+        // different material inside this pass.
         let bestPlacements: GridPlacement[] = [];
         let bestOrientation: Dimensions | null = null;
         let bestVC: VirtualContainer | null = null;
-        let selectedMaterial: Material = material; // Default to current pass material
+        const selectedMaterial: Material = material; // Always current material
 
         for (const vc of virtualContainers) {
-            if (packingMode !== 'SEQUENTIAL' && allMaterials && allMaterials.length > 0) {
-                // Evaluated Material Choice
-                const bestForSpace = findBestMaterialForSpace(vc, allMaterials, load, fullMixRotations, allLoads);
-                if (bestForSpace.bestMaterial && bestForSpace.bestPlacements.length > bestPlacements.length) {
-                    bestPlacements = bestForSpace.bestPlacements;
-                    bestOrientation = bestForSpace.bestOrientation;
-                    bestVC = vc;
-                    selectedMaterial = bestForSpace.bestMaterial;
+            // Fixed Material Choice — strict input order regardless of packingMode
+            for (const orient of orientations) {
+                if (orient.length > vc.length || orient.width > vc.width || orient.height > vc.height) {
+                    continue;
                 }
-            } else {
-                // Fixed Material Choice (Sequential Mode)
-                for (const orient of orientations) {
-                    if (orient.length > vc.length || orient.width > vc.width || orient.height > vc.height) {
-                        continue;
-                    }
 
-                    const volume: GridVolume = {
-                        origin: { x: 0, y: 0, z: 0 },
-                        bounds: { length: vc.length, width: vc.width, height: vc.height }
-                    };
+                const volume: GridVolume = {
+                    origin: { x: 0, y: 0, z: 0 },
+                    bounds: { length: vc.length, width: vc.width, height: vc.height }
+                };
 
-                    const placements = packGridCore(volume, orient);
-                    let usable = Math.min(placements.length, effectiveRemaining);
+                const placements = packGridCore(volume, orient);
+                const usable = Math.min(placements.length, effectiveRemaining);
 
-                    if (usable > bestPlacements.length) {
-                        bestPlacements = placements.slice(0, usable);
-                        bestOrientation = orient;
-                        bestVC = vc;
-                        selectedMaterial = material;
-                    }
+                if (usable > bestPlacements.length) {
+                    bestPlacements = placements.slice(0, usable);
+                    bestOrientation = orient;
+                    bestVC = vc;
                 }
             }
         }

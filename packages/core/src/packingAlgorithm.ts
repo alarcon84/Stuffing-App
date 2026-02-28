@@ -1,18 +1,115 @@
-import type { Container, PackingResult } from './types';
+import type { Container, PackingResult, ContainerLoad } from './types';
 import { deepClone, calculateStats } from './utils';
 import { runPostProcessingPipeline } from './postProcessingPipeline';
-import { injectContinuationVCs } from './virtualContainer';
 import { debugLogger } from './debugLogger';
 import { packSequential } from './sequentialPass';
 import { packSmartStack } from './smartStackMode';
+import type { VirtualContainer } from './virtualContainer';
 
 console.log("Stuffing Calculator v0.1.8");
+
+// ---------------------------------------------------------------------------
+// KILL SWITCH
+// Set ENABLE_STAGE_DRIVEN = true to activate the new stage-driven pipeline.
+// When false, the old code path runs unchanged (safe fallback).
+// ---------------------------------------------------------------------------
+const ENABLE_STAGE_DRIVEN = true;
 
 // Helper to map packGridCore position (Width, Length, Height) to PlacedItem (Length, Height, Width)
 // Kept for consistency if needed by local helpers, though most logic is now delegated.
 export const kernelToPlacedPosition = (p: [number, number, number]): [number, number, number] => {
     return [p[1], p[2], p[0]]; // [Length, Height, Width] from [Width, Length, Height]
 };
+
+// --------------------------------------------------------------------------
+// STAGE-DRIVEN DRIVER
+// --------------------------------------------------------------------------
+
+/**
+ * packStageDriven — Processes materials strictly one at a time: M1 → M2 → M3.
+ *
+ * After each material stage:
+ *  1. Base-pack the material (sequential, starting from current container state).
+ *  2. Immediately run TopUp + FullMix for THIS material only.
+ *  3. Commit the resulting loads as the starting point for the next material.
+ *  4. Use a FRESH VC queue for each stage so no stale geometry bleeds through.
+ *
+ * In SEQUENTIAL mode:  M2 is confined to its own Y-region (yRangeFilter).
+ * In SMART_STACK mode: M2 is offered ALL prior VCs (can fill M1 gaps).
+ */
+function packStageDriven(
+    container: Container,
+    activeMaterials: import('./types').Material[],
+    margins: { length?: number; width?: number; height?: number },
+    isCombined: boolean,
+    packingMode: import('./types').PackingMode,
+    enableTopUp: boolean,
+    enableFullMix: boolean,
+    fullMixRotations?: import('./types').FullMixRotations,
+    initialQuantities?: Map<number, number>
+): PackingResult {
+    let currentLoads: ContainerLoad[] = [];
+    const collectedVCs: VirtualContainer[] = [];
+
+    for (let mIdx = 0; mIdx < activeMaterials.length; mIdx++) {
+        const mat = activeMaterials[mIdx];
+
+        // ── 1. BASE PACK (this material only, appended to existing containers) ──
+        const baseResult = packSequential(
+            container,
+            [mat],
+            margins,
+            isCombined,
+            currentLoads   // Pass current state so material appends after earlier ones
+        );
+        currentLoads = baseResult.loads;
+
+        // ── 2. POST-PROCESS (TopUp + FullMix) for THIS material only ──
+        if (enableTopUp || enableFullMix) {
+            // Always pass a FRESH queue per stage — kills stale VC bleed
+            const stageVCQueue: VirtualContainer[] = [];
+            const originalQty = initialQuantities?.get(mat.id) ?? mat.quantity;
+            const pipelineMat = { ...mat, quantity: originalQty };
+
+            const pipelineResult = runPostProcessingPipeline(
+                currentLoads,
+                pipelineMat,
+                container,
+                margins,
+                enableTopUp,
+                enableFullMix,
+                packingMode,
+                fullMixRotations,
+                mIdx,           // materialIndex — drives yRangeFilter in Sequential
+                activeMaterials,
+                stageVCQueue,
+                true            // isStageDriven — disables compaction in pipeline
+            );
+
+            currentLoads = pipelineResult.loads;
+            if (pipelineResult.virtualContainers) {
+                collectedVCs.push(...pipelineResult.virtualContainers);
+            }
+        }
+    }
+
+    // ── 3. Compute totals from final loads ──
+    const totalItems = currentLoads.reduce((s, l) => s + l.itemCount, 0);
+    const totalVolume = currentLoads.reduce((s, l) =>
+        s + l.items.reduce((v, i) => v + i.dimensions.length * i.dimensions.width * i.dimensions.height, 0), 0
+    );
+
+    return {
+        loads: currentLoads,
+        totalItems,
+        totalContainers: currentLoads.length,
+        unpackedItems: 0, // Recalculated at the end of calculatePacking
+        containerDimensions: container.dimensions,
+        actualUsedVolume: totalVolume,
+        virtualContainers: collectedVCs,
+        errors: []
+    };
+}
 
 // --------------------------------------------------------------------------
 // MAIN ENTRY POINT
@@ -53,118 +150,93 @@ export const calculatePacking = (
     let result: PackingResult;
 
     // 2. Dispatch to Packing Strategy
-    // For single material (non-combined), we use Sequential logic (it handles single mat perfectly)
-    // This replaces the old "Fast Path" with a unified code path.
-
-    // Explicit Mode Routing
-    switch (packingMode) {
-        case 'SMART_STACK':
-            // Vertical stacking only allowed if Fill (TopUp) or Maximize (FullMix) is enabled
-            const allowVerticalStacking = enableTopUp || enableFullMix;
-            result = packSmartStack(container, activeMaterials, margins, isCombined, allowVerticalStacking);
-            break;
-
-        case 'TETRIS':
-            // TODO: Implement Tetris
-            result = {
-                loads: [],
-                totalItems: 0,
-                totalContainers: 0,
-                unpackedItems: activeMaterials.reduce((s, m) => s + m.quantity, 0),
-                containerDimensions: container.dimensions,
-                errors: ['TETRIS mode not yet implemented']
-            };
-            break;
-
-        case 'SEQUENTIAL':
-        default:
-            // Default to Sequential (No mixing, container sharing allowed but partitioned)
-            result = packSequential(container, activeMaterials, margins, isCombined);
-            break;
-    }
-
-    // 3. Apply Post-Processing Pipeline (Top-Up / Full-Mix)
-    if (enableTopUp || enableFullMix) {
-        // pipeline needs a "primary material" context, but really it just needs to know what to pack.
-        // It iterates through ALL materials to find unpacked items and try to squeeze them in.
-
-        // We run the pipeline for EACH material that has remaining items?
-        // Or the pipeline handles all?
-        // runPostProcessingPipeline implementation takes `material` as input.
-        // So we must call it for each material.
-
-        let currentLoads = result.loads;
-        let collectedVCs: import('./virtualContainer').VirtualContainer[] = result.virtualContainers ? [...result.virtualContainers] : [];
-
-        // 1.1 Establish exactly ONE authoritative space structure
-        const globalVCQueue: import('./virtualContainer').VirtualContainer[] = [];
-
-        for (let mIdx = 0; mIdx < activeMaterials.length; mIdx++) {
-            const mat = activeMaterials[mIdx];
-            const originalQty = initialQuantities.get(mat.id) ?? mat.quantity;
-            // We pass the MATERIAL object. Pipeline checks `remainingQuantity`.
-            // Pipeline calculates remaining itself based on loads.
-            // So we just pass the material with its ORIGINAL quantity (Total Desired).
-
-            const pipelineMat = { ...mat, quantity: originalQty };
-
-            const pipelineResult = runPostProcessingPipeline(
-                currentLoads,
-                pipelineMat,
-                container,
-                margins,
-                enableTopUp,
-                enableFullMix,
-                packingMode,
-                fullMixRotations,
-                mIdx,  // materialIndex — controls sequential guard + conservative mode
-                activeMaterials,
-                globalVCQueue
-            );
-
-            currentLoads = pipelineResult.loads;
-            if (pipelineResult.virtualContainers) {
-                collectedVCs.push(...pipelineResult.virtualContainers);
+    if (ENABLE_STAGE_DRIVEN && (packingMode === 'SEQUENTIAL' || packingMode === 'SMART_STACK')) {
+        // NEW: Stage-driven driver — per-material base-pack + post-process
+        // Handles both SEQUENTIAL (Y-region isolated) and SMART_STACK (gap-filling allowed)
+        result = packStageDriven(
+            container,
+            activeMaterials,
+            margins,
+            isCombined,
+            packingMode,
+            enableTopUp,
+            enableFullMix,
+            fullMixRotations,
+            initialQuantities
+        );
+    } else {
+        // LEGACY fallback — preserved exactly as before
+        switch (packingMode) {
+            case 'SMART_STACK': {
+                const allowVerticalStacking = enableTopUp || enableFullMix;
+                result = packSmartStack(container, activeMaterials, margins, isCombined, allowVerticalStacking);
+                break;
             }
 
-            // Inject continuation VC between material passes (FullMix only).
-            // Gives Mx+1 a clean full-height/width starting plane at Mx's leading
-            // edge, restoring the same structured geometry that M1 sees by default.
-            // Residual guillotine sub-VCs are left intact as secondary fill targets.
-            if (enableFullMix && mIdx < activeMaterials.length - 1) {
-                injectContinuationVCs(currentLoads, container.dimensions, margins, globalVCQueue);
-            }
+            case 'TETRIS':
+                result = {
+                    loads: [],
+                    totalItems: 0,
+                    totalContainers: 0,
+                    unpackedItems: activeMaterials.reduce((s, m) => s + m.quantity, 0),
+                    containerDimensions: container.dimensions,
+                    errors: ['TETRIS mode not yet implemented']
+                };
+                break;
+
+            case 'SEQUENTIAL':
+            default:
+                result = packSequential(container, activeMaterials, margins, isCombined);
+                break;
         }
 
-        // --- ORDER VALIDATION (Sequential mode) ---
-        if (packingMode === 'SEQUENTIAL' && activeMaterials.length > 1) {
-            const contVol = container.dimensions.length * container.dimensions.width * container.dimensions.height;
-            for (const load of currentLoads) {
-                const volByMat = new Map<number, number>();
-                load.items.forEach(item => {
-                    const mid = item.materialId || 1;
-                    const vol = item.dimensions.length * item.dimensions.width * item.dimensions.height;
-                    volByMat.set(mid, (volByMat.get(mid) || 0) + vol);
-                });
+        // Legacy post-processing (runs after ALL materials are base-packed)
+        if (enableTopUp || enableFullMix) {
+            let currentLoads = result.loads;
+            let collectedVCs: VirtualContainer[] = result.virtualContainers ? [...result.virtualContainers] : [];
+            const globalVCQueue: VirtualContainer[] = [];
 
-                // Check if any later material dominates a container that an earlier material barely fills
-                const matIds = Array.from(volByMat.keys()).sort((a, b) => a - b);
-                if (matIds.length > 1) {
-                    const primaryMat = matIds[0];
-                    const primaryPct = ((volByMat.get(primaryMat) || 0) / contVol) * 100;
-                    for (const laterId of matIds.slice(1)) {
-                        const laterPct = ((volByMat.get(laterId) || 0) / contVol) * 100;
-                        if (primaryPct < 50 && laterPct > primaryPct) {
-                            console.warn(`[ORDER-WARN] Load ${load.id}: Mat${laterId} (${laterPct.toFixed(1)}%) dominates over Mat${primaryMat} (${primaryPct.toFixed(1)}%)`);
-                        }
-                    }
+            for (let mIdx = 0; mIdx < activeMaterials.length; mIdx++) {
+                const mat = activeMaterials[mIdx];
+                const originalQty = initialQuantities.get(mat.id) ?? mat.quantity;
+                const pipelineMat = { ...mat, quantity: originalQty };
+
+                const pipelineResult = runPostProcessingPipeline(
+                    currentLoads,
+                    pipelineMat,
+                    container,
+                    margins,
+                    enableTopUp,
+                    enableFullMix,
+                    packingMode,
+                    fullMixRotations,
+                    mIdx,
+                    activeMaterials,
+                    globalVCQueue,
+                    false // isStageDriven = false → full legacy behavior
+                );
+
+                currentLoads = pipelineResult.loads;
+                if (pipelineResult.virtualContainers) {
+                    collectedVCs.push(...pipelineResult.virtualContainers);
                 }
             }
-        }
 
-        // Update result with pipeline modifications
-        result.loads = currentLoads;
-        result.virtualContainers = collectedVCs;
+            result.loads = currentLoads;
+            result.virtualContainers = collectedVCs;
+        }
+    }
+
+    // 3. Optional TETRIS fallback (neither path handles it yet)
+    if (packingMode === 'TETRIS' && ENABLE_STAGE_DRIVEN) {
+        result = {
+            loads: [],
+            totalItems: 0,
+            totalContainers: 0,
+            unpackedItems: activeMaterials.reduce((s, m) => s + m.quantity, 0),
+            containerDimensions: container.dimensions,
+            errors: ['TETRIS mode not yet implemented']
+        };
     }
 
     // 4. Final Statistics Calculation
@@ -189,7 +261,8 @@ export const calculatePacking = (
     debugLogger.log('PACKING', 'Calculation complete', {
         totalItems: statsResult.totalItems,
         totalContainers: statsResult.totalContainers,
-        mode: packingMode
+        mode: packingMode,
+        stageDriven: ENABLE_STAGE_DRIVEN
     });
 
     return statsResult;
