@@ -26,7 +26,7 @@
  */
 
 import { packGridCore, type GridVolume, type GridPlacement } from '../packGridCore';
-import { findRemainingSpaces, findTopSurfaces, mapToRealCoordinates, type VirtualContainer } from '../virtualContainer';
+import { findRemainingSpaces, findTopSurfaces, mapToRealCoordinates, createFrontVC, createSideVC, createTopVC, type VirtualContainer } from '../virtualContainer';
 import { hasPhysicalSupport } from '../utils';
 
 import type { Dimensions, ContainerLoad, PlacedItem, Material } from '../types';
@@ -36,6 +36,7 @@ export interface FullMixResult {
     placedCount: number;
     consumedVolume: number;
     remainingQuantity: number;
+    virtualContainers?: VirtualContainer[];
 }
 
 /**
@@ -65,6 +66,59 @@ function doesOverlap3D(candidate: PlacedItem, existingItems: PlacedItem[]): bool
     return false;
 }
 
+function findBestMaterialForSpace(
+    vc: VirtualContainer,
+    allMaterials: Material[],
+    load: ContainerLoad,
+    fullMixRotations: import('../types').FullMixRotations | undefined,
+    allLoads: ContainerLoad[]
+): { bestMaterial: Material | null, bestPlacements: GridPlacement[], bestOrientation: Dimensions | null } {
+    let bestMaterial: Material | null = null;
+    let bestPlacements: GridPlacement[] = [];
+    let bestOrientation: Dimensions | null = null;
+    let bestScore = -Infinity;
+
+    for (const mat of allMaterials) {
+        // Calculate remaining globally across all relevant containers
+        const loadsToUse = allLoads.length > 0 ? allLoads : [load];
+        const totalPacked = loadsToUse.flatMap(l => l.items).filter(i => i.materialId === mat.id).reduce((sum, i) => sum + (i.itemCount || 1), 0);
+        const remaining = mat.quantity - totalPacked;
+
+        if (remaining <= 0) continue;
+
+        const boxDims = mat.box.dimensions;
+        const allowed = fullMixRotations || { x: true, y: true, z: true };
+        const orientations = generateOrientations(boxDims, allowed);
+
+        for (const orient of orientations) {
+            if (orient.length > vc.length || orient.width > vc.width || orient.height > vc.height) {
+                continue;
+            }
+
+            const volume: GridVolume = {
+                origin: { x: 0, y: 0, z: 0 },
+                bounds: { length: vc.length, width: vc.width, height: vc.height }
+            };
+
+            const placements = packGridCore(volume, orient);
+            const fitCount = Math.min(placements.length, remaining);
+
+            if (fitCount > 0) {
+                const matVol = orient.length * orient.width * orient.height;
+                const score = fitCount * matVol; // prioritize volume fill
+
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestPlacements = placements.slice(0, fitCount);
+                    bestOrientation = orient;
+                    bestMaterial = mat;
+                }
+            }
+        }
+    }
+    return { bestMaterial, bestPlacements, bestOrientation };
+}
+
 export function runFullMixPass(
     material: Material,
     load: ContainerLoad,
@@ -75,13 +129,18 @@ export function runFullMixPass(
     excludeTop: boolean = false,
     fullMixRotations?: import('../types').FullMixRotations,
     materialIndex: number = 0,
-    yRangeFilter?: { min: number; max: number }
+    yRangeFilter?: { min: number; max: number },
+    packingMode: import('../types').PackingMode = 'SEQUENTIAL',
+    allMaterials?: Material[],
+    globalVCQueue: VirtualContainer[] = [],
+    allLoads: ContainerLoad[] = []
 ): FullMixResult {
     const result: FullMixResult = {
         placements: [],
         placedCount: 0,
         consumedVolume: 0,
-        remainingQuantity: remainingQuantity
+        remainingQuantity: remainingQuantity,
+        virtualContainers: []
     };
 
     if (!load || !load.items || !containerDims) {
@@ -127,15 +186,21 @@ export function runFullMixPass(
             break; // Already at ceiling
         }
 
-        // 1. Recompute ALL virtual containers from CURRENT load state
-        const vcsBasic = findRemainingSpaces(load, containerDims, margins, excludeTop, yRangeFilter);
+        // 1. Recompute ALL virtual containers from CURRENT load state IF QUEUE IS EMPTY
+        if (globalVCQueue.length === 0) {
+            const vcsBasic = findRemainingSpaces(load, containerDims, margins, excludeTop, yRangeFilter);
 
-        let vcsSkyline: VirtualContainer[] = [];
-        if (!excludeTop) {
-            vcsSkyline = findTopSurfaces(load, containerDims, margins, yRangeFilter);
+            let vcsSkyline: VirtualContainer[] = [];
+            if (!excludeTop) {
+                vcsSkyline = findTopSurfaces(load, containerDims, margins, yRangeFilter);
+            }
+
+            globalVCQueue.push(...vcsBasic, ...vcsSkyline);
         }
 
-        const virtualContainers = [...vcsBasic, ...vcsSkyline];
+        // 1.5. Instead of recalculating, we pull the available spaces from the global queue
+        // Filter elements belonging to this load
+        const virtualContainers = globalVCQueue.filter(vc => vc.realContainerId === load.id);
 
         if (virtualContainers.length === 0) {
             break; // No more space
@@ -145,31 +210,39 @@ export function runFullMixPass(
         let bestPlacements: GridPlacement[] = [];
         let bestOrientation: Dimensions | null = null;
         let bestVC: VirtualContainer | null = null;
+        let selectedMaterial: Material = material; // Default to current pass material
 
         for (const vc of virtualContainers) {
-            for (const orient of orientations) {
-                // Quick check: does orientation fit at all?
-                if (orient.length > vc.length || orient.width > vc.width || orient.height > vc.height) {
-                    continue;
-                }
-
-                const volume: GridVolume = {
-                    origin: { x: 0, y: 0, z: 0 },
-                    bounds: {
-                        length: vc.length,
-                        width: vc.width,
-                        height: vc.height
-                    }
-                };
-
-                const placements = packGridCore(volume, orient);
-
-                let usable = Math.min(placements.length, effectiveRemaining);
-
-                if (usable > bestPlacements.length) {
-                    bestPlacements = placements.slice(0, usable);
-                    bestOrientation = orient;
+            if (packingMode !== 'SEQUENTIAL' && allMaterials && allMaterials.length > 0) {
+                // Evaluated Material Choice
+                const bestForSpace = findBestMaterialForSpace(vc, allMaterials, load, fullMixRotations, allLoads);
+                if (bestForSpace.bestMaterial && bestForSpace.bestPlacements.length > bestPlacements.length) {
+                    bestPlacements = bestForSpace.bestPlacements;
+                    bestOrientation = bestForSpace.bestOrientation;
                     bestVC = vc;
+                    selectedMaterial = bestForSpace.bestMaterial;
+                }
+            } else {
+                // Fixed Material Choice (Sequential Mode)
+                for (const orient of orientations) {
+                    if (orient.length > vc.length || orient.width > vc.width || orient.height > vc.height) {
+                        continue;
+                    }
+
+                    const volume: GridVolume = {
+                        origin: { x: 0, y: 0, z: 0 },
+                        bounds: { length: vc.length, width: vc.width, height: vc.height }
+                    };
+
+                    const placements = packGridCore(volume, orient);
+                    let usable = Math.min(placements.length, effectiveRemaining);
+
+                    if (usable > bestPlacements.length) {
+                        bestPlacements = placements.slice(0, usable);
+                        bestOrientation = orient;
+                        bestVC = vc;
+                        selectedMaterial = material;
+                    }
                 }
             }
         }
@@ -195,9 +268,10 @@ export function runFullMixPass(
                 dimensions: bestOrientation!,
                 type: 'box',
                 itemCount: 1,
-                materialId: material.id,
+                materialId: selectedMaterial.id,
                 locked: false,
-                source: 'FULL_MIX'
+                source: 'FULL_MIX',
+                vcId: bestVC!.id
             };
 
             const realItem = mapToRealCoordinates(virtualPlacement, bestVC!);
@@ -237,9 +311,54 @@ export function runFullMixPass(
         result.placedCount += placedNow.length;
         result.consumedVolume += placedNow.length *
             (bestOrientation!.length * bestOrientation!.width * bestOrientation!.height);
+
+        // Collect the VC that was used
+        if (bestVC && result.virtualContainers) {
+            // Check if we already have this exact VC ID to avoid duplicates
+            if (!result.virtualContainers.some(vc => vc.id === bestVC.id)) {
+                result.virtualContainers.push(bestVC);
+            }
+
+            // PHASE 2 - Guillotine Cuts: Consume the VC and append new free space
+            const vcIndex = globalVCQueue.findIndex(v => v.id === bestVC!.id);
+            if (vcIndex !== -1) {
+                globalVCQueue.splice(vcIndex, 1);
+            }
+
+            // Calculate bounding box of placed items
+            let minX = Infinity, minY = Infinity, minZ = Infinity;
+            let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+            for (const p of placedNow) {
+                const rx = p.position[0] - p.dimensions.length / 2;
+                const ry = p.position[1] - p.dimensions.height / 2;
+                const rz = p.position[2] - p.dimensions.width / 2;
+                const rX = p.position[0] + p.dimensions.length / 2;
+                const rY = p.position[1] + p.dimensions.height / 2;
+                const rZ = p.position[2] + p.dimensions.width / 2;
+                if (rx < minX) minX = rx;
+                if (ry < minY) minY = ry;
+                if (rz < minZ) minZ = rz;
+                if (rX > maxX) maxX = rX;
+                if (rY > maxY) maxY = rY;
+                if (rZ > maxZ) maxZ = rZ;
+            }
+            const blockLength = maxX - minX;
+            const blockHeight = maxY - minY;
+            const blockWidth = maxZ - minZ;
+
+            const frontVC = createFrontVC(bestVC, blockLength, blockWidth, blockHeight);
+            const sideVC = createSideVC(bestVC, blockLength, blockWidth, blockHeight);
+            const topVC = createTopVC(bestVC, blockLength, blockWidth, blockHeight);
+
+            if (frontVC) globalVCQueue.push(frontVC);
+            if (sideVC) globalVCQueue.push(sideVC);
+            if (topVC) globalVCQueue.push(topVC);
+        }
+
+        // 5. Update state for NEXT iteration
         effectiveRemaining -= placedNow.length;
 
-        // Update load for the NEXT iteration (fresh VC computation will see these items)
+        // Update load for the NEXT iteration (though space is now in globalVCQueue, we still need load for bounding checks)
         load = {
             ...load,
             items: [...load.items, ...placedNow]

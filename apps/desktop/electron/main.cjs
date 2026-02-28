@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 
 function createWindow() {
@@ -21,6 +21,13 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+    // Register IPC handlers
+    ipcMain.handle('take-screenshot', async (event) => {
+        const webContents = event.sender;
+        const image = await webContents.capturePage();
+        return image.toPNG();
+    });
+
     createWindow();
 
     app.on('activate', () => {

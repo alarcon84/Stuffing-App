@@ -14,11 +14,13 @@ export interface VirtualContainer {
     width: number;
     height: number;
     realContainerId: number; // Track which real container this space belongs to
+    id: string; // Unique identifier for the UI to group results
 }
 
 export interface PassResult {
     placements: PlacedItem[];
     remainingQuantity: number;
+    virtualContainers?: VirtualContainer[];
 }
 
 /**
@@ -123,7 +125,8 @@ export function findTopSurfaces(
             length: regionLength,
             width: containerDims.width - marginW * 2,
             height: availableHeight,
-            realContainerId: load.id
+            realContainerId: load.id,
+            id: `vc_skyline_${Math.round(regionStart)}_${Math.round(region.height)}`
         };
 
         // Y-range filter: skip VCs below this material's Y-floor
@@ -161,7 +164,8 @@ export function findRemainingSpaces(
             length: containerDims.length - marginL * 2,
             width: containerDims.width - marginW * 2,
             height: containerDims.height - marginH * 2,
-            realContainerId: load.id
+            realContainerId: load.id,
+            id: `vc_full_empty_${load.id}`
         });
         return virtualContainers;
     }
@@ -186,7 +190,8 @@ export function findRemainingSpaces(
             length: frontLength,
             width: containerDims.width - marginW * 2,
             height: containerDims.height - marginH * 2,
-            realContainerId: load.id
+            realContainerId: load.id,
+            id: `vc_front_${Math.round(maxX)}`
         });
     }
 
@@ -222,7 +227,8 @@ export function findRemainingSpaces(
                     length: safeLength,
                     width: safeWidth,
                     height: topHeight,
-                    realContainerId: load.id
+                    realContainerId: load.id,
+                    id: `vc_top_${Math.round(maxY)}`
                 });
             }
         }
@@ -239,7 +245,8 @@ export function findRemainingSpaces(
                 length: occupiedLengthForSide,
                 width: sideWidth,
                 height: containerDims.height - marginH * 2,
-                realContainerId: load.id
+                realContainerId: load.id,
+                id: `vc_side_${Math.round(maxZ)}`
             });
         }
     }
@@ -250,6 +257,60 @@ export function findRemainingSpaces(
     }
 
     return virtualContainers;
+}
+
+/**
+ * PHASE 2 - Guillotine Cuts
+ * When a placement occurs inside a VirtualContainer, these functions
+ * split the remaining free space into up to 3 new sub-VirtualContainers.
+ */
+
+export function createFrontVC(originalVC: VirtualContainer, placedLength: number, _placedWidth: number, _placedHeight: number): VirtualContainer | null {
+    const frontLength = originalVC.length - placedLength;
+    if (frontLength > 1) {
+        return {
+            origin: { x: originalVC.origin.x + placedLength, y: originalVC.origin.y, z: originalVC.origin.z },
+            length: frontLength,
+            width: originalVC.width,
+            height: originalVC.height,
+            realContainerId: originalVC.realContainerId,
+            id: `vc_front_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
+        };
+    }
+    return null;
+}
+
+export function createSideVC(originalVC: VirtualContainer, placedLength: number, placedWidth: number, _placedHeight: number): VirtualContainer | null {
+    const sideWidth = originalVC.width - placedWidth;
+    if (sideWidth > 1) {
+        return {
+            // Note: Side VC is adjacent to the placed block along the width axis.
+            // Constrain length to placedLength to avoid overlapping with FrontVC space.
+            origin: { x: originalVC.origin.x, y: originalVC.origin.y, z: originalVC.origin.z + placedWidth },
+            length: placedLength,
+            width: sideWidth,
+            height: originalVC.height,
+            realContainerId: originalVC.realContainerId,
+            id: `vc_side_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
+        };
+    }
+    return null;
+}
+
+export function createTopVC(originalVC: VirtualContainer, placedLength: number, placedWidth: number, placedHeight: number): VirtualContainer | null {
+    const topHeight = originalVC.height - placedHeight;
+    // Constrain length and width to the placed block to prevent overlapping SideVC and FrontVC
+    if (topHeight > 1) {
+        return {
+            origin: { x: originalVC.origin.x, y: originalVC.origin.y + placedHeight, z: originalVC.origin.z },
+            length: placedLength,
+            width: placedWidth,
+            height: topHeight,
+            realContainerId: originalVC.realContainerId,
+            id: `vc_top_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
+        };
+    }
+    return null;
 }
 
 /**
@@ -281,4 +342,67 @@ export function hasMinimumSpace(
         virtualContainer.width >= boxDims.width &&
         virtualContainer.height >= boxDims.height
     );
+}
+
+/**
+ * Continuation VC Injection — called between material passes in packingAlgorithm.ts.
+ *
+ * After Material X finishes its FullMix pipeline run, the globalVCQueue contains
+ * only fragmented guillotine sub-VCs from within X's occupied region.  There is no
+ * structured "front continuation plane" at X's leading edge, so Material X+1 sees
+ * junk geometry and fills opportunistically (causing floating, non-layered results).
+ *
+ * This function fixes that by:
+ *   1. Finding the rightmost X extent of all items in each load.
+ *   2. Synthesising a full-height / full-width VC starting at that X coordinate.
+ *   3. PREPENDING it to globalVCQueue so it is evaluated with priority over
+ *      residual guillotine fragments (which are left intact as secondary targets).
+ *
+ * Result: Mx+1 sees the same clean starting plane that M1 sees at Default packing,
+ * restoring geometric continuity and solid-layer behaviour.
+ */
+export function injectContinuationVCs(
+    loads: ContainerLoad[],
+    containerDims: Dimensions,
+    margins: { length?: number; width?: number; height?: number },
+    globalVCQueue: VirtualContainer[]
+): void {
+    const marginL = margins.length ?? 20;
+    const marginW = margins.width ?? 20;
+    const marginH = margins.height ?? 20;
+
+    for (const load of loads) {
+        if (load.items.length === 0) continue;
+
+        // Find the rightmost X edge across ALL items in this load
+        let maxX = 0;
+        for (const item of load.items) {
+            const right = item.position[0] + item.dimensions.length / 2;
+            if (right > maxX) maxX = right;
+        }
+
+        const remainingLength = (containerDims.length - marginL) - maxX;
+        if (remainingLength <= 1) continue; // No usable space ahead
+
+        const vcId = `vc_continuation_${load.id}_${Math.round(maxX)}`;
+
+        // Deduplicate: remove stale copy if it exists
+        const staleIdx = globalVCQueue.findIndex(v => v.id === vcId);
+        if (staleIdx !== -1) globalVCQueue.splice(staleIdx, 1);
+
+        const vc: VirtualContainer = {
+            origin: { x: maxX, y: marginH, z: marginW },
+            length: remainingLength,
+            width: containerDims.width - marginW * 2,
+            height: containerDims.height - marginH * 2,
+            realContainerId: load.id,
+            id: vcId
+        };
+
+        // Prepend for priority — continuation plane evaluated before residual fragments
+        globalVCQueue.unshift(vc);
+
+        console.log(`[CONTINUATION] Load ${load.id}: injected plane at X=${Math.round(maxX)}, ` +
+            `remaining=${Math.round(remainingLength)}mm (${vc.length}×${vc.width}×${vc.height}mm)`);
+    }
 }

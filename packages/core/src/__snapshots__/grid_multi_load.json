@@ -26,7 +26,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -51,7 +52,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -76,7 +78,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -101,7 +104,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -126,7 +130,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -151,7 +156,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -176,7 +182,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -201,7 +208,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -226,7 +234,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -251,7 +260,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -276,7 +286,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -301,7 +312,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -326,7 +338,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -351,7 +364,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -376,7 +390,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -401,7 +416,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -426,7 +442,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -451,7 +468,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -476,7 +494,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -501,12 +520,13 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         }
       ],
       "itemCount": 20,
       "utilization": 60.24835747578041,
-      "type": "full"
+      "type": "partial"
     },
     {
       "id": 2,
@@ -534,7 +554,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -559,7 +580,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -584,7 +606,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -609,7 +632,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -634,7 +658,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -659,7 +684,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -684,7 +710,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -709,7 +736,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -734,7 +762,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -759,7 +788,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -784,7 +814,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -809,7 +840,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -834,7 +866,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -859,7 +892,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -884,7 +918,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -909,7 +944,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -934,7 +970,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -959,7 +996,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -984,7 +1022,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1009,12 +1048,13 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         }
       ],
       "itemCount": 20,
       "utilization": 60.24835747578041,
-      "type": "full"
+      "type": "partial"
     },
     {
       "id": 3,
@@ -1042,7 +1082,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1067,7 +1108,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1092,7 +1134,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1117,7 +1160,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1142,7 +1186,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1167,7 +1212,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1192,7 +1238,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1217,7 +1264,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1242,7 +1290,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1267,12 +1316,13 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         }
       ],
       "itemCount": 10,
       "utilization": 30.124178737890205,
-      "type": "partial"
+      "type": "full"
     }
   ],
   "totalItems": 50,
@@ -1283,13 +1333,8 @@
     "width": 2352,
     "height": 2393
   },
-  "errors": [],
   "actualUsedVolume": 50000000000,
-  "packedBoxDimensions": {
-    "length": 1000,
-    "width": 1000,
-    "height": 1000
-  },
+  "optimizationsAvailable": [],
   "totalPallets": 0,
   "totalLots": 0
 }

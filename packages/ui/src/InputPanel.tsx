@@ -28,31 +28,54 @@ interface InputPanelProps {
 }
 
 const CONTAINER_TYPES: Container[] = [
-    { name: "20' Standard", type: '20', dimensions: { length: 5898, width: 2352, height: 2393 } },
-    { name: "40' Standard", type: '40', dimensions: { length: 12032, width: 2352, height: 2393 } },
-    { name: "40' High Cube", type: '40HC', dimensions: { length: 12032, width: 2352, height: 2698 } },
-    { name: "53' Trailer", type: '53', dimensions: { length: 16000, width: 2540, height: 2700 } },
+    // --- Current inner / door-height accurate presets ---
+    { name: "20ft", type: '20', dimensions: { length: 5865, width: 2330, height: 2200 }, doorHeight: 2200 },
+    { name: "40ft", type: '40', dimensions: { length: 12000, width: 2330, height: 2200 }, doorHeight: 2200 },
+    { name: "40HC", type: '40HC', dimensions: { length: 12000, width: 2330, height: 2540 }, doorHeight: 2540 },
+    { name: "EU Trailer", type: 'eu-trailer', dimensions: { length: 13600, width: 2450, height: 2600 } },
+    { name: "EU Mega", type: 'eu-mega', dimensions: { length: 13600, width: 2450, height: 2700 } },
+    { name: "53ft", type: '53', dimensions: { length: 15955, width: 2560, height: 2820 } },
+    { name: "11Ton WT", type: '11tonwt', dimensions: { length: 9100, width: 2380, height: 2325 } },
+    // --- Legacy "Std" presets (old values preserved) ---
+    { name: "20ft Std", type: 'custom', dimensions: { length: 5898, width: 2352, height: 2393 } },
+    { name: "40ft Std", type: 'custom', dimensions: { length: 12032, width: 2352, height: 2393 } },
+    { name: "40HC Std", type: 'custom', dimensions: { length: 12032, width: 2352, height: 2698 } },
+    { name: "53ft Std", type: 'custom', dimensions: { length: 16000, width: 2540, height: 2700 } },
+    // --- Fully custom ---
     { name: "Custom", type: 'custom', dimensions: { length: 12000, width: 2400, height: 2600 } },
 ];
 
+// Inner heights for the sea containers that have a door height
+const INNER_HEIGHTS: Record<string, number> = {
+    '20ft': 2350,
+    '40ft': 2350,
+    '40HC': 2690,
+};
+
 const COLORS = [
-    '#3b82f6', // Blue
-    '#ef4444', // Red
-    '#10b981', // Green
-    '#f59e0b', // Amber
+    '#0ea5e9', // Sky Blue
+    '#f43f5e', // Rose Coral
+    '#14b8a6', // Deep Teal
+    '#eab308', // Amber Gold
     '#8b5cf6', // Violet
-    '#ec4899', // Pink
+    '#f97316', // Vibrant Orange
     '#06b6d4', // Cyan
     '#84cc16', // Lime
-    '#f97316', // Orange
-    '#f97316', // Orange
+    '#ec4899', // Pink
     '#6366f1', // Indigo
 ];
 
 export const PASTEL_PALETTE = [
-    '#fca5a5', '#fdba74', '#fcd34d', '#86efac', '#6ee7b7', '#5eead4', '#7dd3fc', '#93c5fd', '#a5b4fc', '#c4b5fd', '#f0abfc', '#f9a8d4',
-    '#fda4af', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#ec4899',
-    '#ef4444', '#f59e0b', '#84cc16', '#10b981', '#64748b', '#71717a'
+    '#fb7185', '#f43f5e', '#e11d48', // Corals/Roses
+    '#fb923c', '#f97316', '#ea580c', // Oranges
+    '#fbbf24', '#f59e0b', '#d97706', // Ambers
+    '#34d399', '#10b981', '#059669', // Emeralds
+    '#2dd4bf', '#14b8a6', '#0d9488', // Teals
+    '#38bdf8', '#0ea5e9', '#0284c7', // Sky Blues
+    '#818cf8', '#6366f1', '#4f46e5', // Indigos
+    '#a78bfa', '#8b5cf6', '#7c3aed', // Violets
+    '#f472b6', '#ec4899', '#db2777', // Pinks
+    '#9ca3af', '#6b7280', '#4b5563'  // Grays
 ];
 
 export const InputPanel: React.FC<InputPanelProps> = ({ onCalculate, optimizations, onSettingsChange, pendingColorUpdate }) => {
@@ -83,7 +106,9 @@ export const InputPanel: React.FC<InputPanelProps> = ({ onCalculate, optimizatio
     const [activeTabId, setActiveTabId] = useState<number>(1);
     // PHASE 8 Step 3.5: Minimal Stub - packingMode replaces isCombined + enableFullMix
     const [packingMode, setPackingMode] = useState<PackingMode>('SEQUENTIAL');
-    const [container, setContainer] = useState<Container>(CONTAINER_TYPES[3]); // Default 53'
+    const [container, setContainer] = useState<Container>(CONTAINER_TYPES[5]); // Default 53ft
+    // Door-height toggle: true = use door height (default for sea containers), false = use inner height
+    const [useDoorHeight, setUseDoorHeight] = useState<boolean>(true);
     const [margins, setMargins] = useState<{ length: number; width: number; height: number }>({ length: 20, width: 20, height: 20 });
     const [addCount, setAddCount] = useState<number>(1);
 
@@ -240,9 +265,14 @@ export const InputPanel: React.FC<InputPanelProps> = ({ onCalculate, optimizatio
     };
 
     // --- Auto-Recalculate ---
+    // Build the container object with the currently active height (door vs inner)
+    const effectiveContainer: Container = (container.doorHeight && !useDoorHeight && INNER_HEIGHTS[container.name])
+        ? { ...container, dimensions: { ...container.dimensions, height: INNER_HEIGHTS[container.name] } }
+        : container;
+
     const handleRecalculate = useCallback(() => {
-        onCalculate(container, materials, packingMode, margins, enableTopUp, enableFullMix, fullMixRotations);
-    }, [container, materials, packingMode, margins, enableTopUp, enableFullMix, fullMixRotations, onCalculate]);
+        onCalculate(effectiveContainer, materials, packingMode, margins, enableTopUp, enableFullMix, fullMixRotations);
+    }, [effectiveContainer, materials, packingMode, margins, enableTopUp, enableFullMix, fullMixRotations, onCalculate]);
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter') {
@@ -437,681 +467,688 @@ export const InputPanel: React.FC<InputPanelProps> = ({ onCalculate, optimizatio
     };
 
     return (
-        <div className="p-4 bg-gray-50 overflow-y-auto border-r border-gray-200 flex flex-col gap-6 w-full md:w-80 h-[35vh] md:h-full text-base">
-            <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                <BoxIcon className="w-6 h-6" /> Stuffing Calc
-            </h1>
+        <div className="flex flex-col h-[40vh] md:h-full w-full md:w-[380px] bg-[#121212] border-r border-[#333] z-30 shadow-2xl relative">
+            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 no-scrollbar">
+                <h1 className="text-2xl font-bold tracking-tight text-[#E0E0E0] md:mt-2 mb-2 flex items-center gap-2">
+                    <BoxIcon className="w-6 h-6 text-blue-500" /> Stuffing Calc
+                </h1>
 
-            {/* Container Selection */}
-            <section className="space-y-3">
-                <div className="flex items-center justify-between">
-                    <h2 className="font-semibold text-gray-700 flex items-center gap-2">
-                        <ContainerIcon className="w-4 h-4" /> Container
-                    </h2>
-                    <button onClick={() => setShowEditModal(true)} className="text-blue-600 hover:text-blue-800">
-                        <Pencil className="w-4 h-4" />
-                    </button>
-                </div>
-                <select
-                    value={container.name}
-                    onChange={(e) => {
-                        const selected = CONTAINER_TYPES.find(c => c.name === e.target.value);
-                        if (selected) {
-                            setContainer(selected);
-                            setTimeout(() => onCalculate(selected, materials, packingMode, margins, enableTopUp, enableFullMix, fullMixRotations), 0);
-                        }
-                    }}
-                    className="w-full p-3 border rounded text-base h-12 bg-white"
-                >
-                    {CONTAINER_TYPES.map(c => (
-                        <option key={c.name} value={c.name}>{c.name}</option>
-                    ))}
-                </select>
-                <div className="text-xs text-gray-500 flex justify-between px-1">
-                    <span>L: {container.dimensions.length}</span>
-                    <span>W: {container.dimensions.width}</span>
-                    <span>H: {container.dimensions.height}</span>
-                </div>
-            </section>
-
-            {/* Post-Processing Passes — MOVED TO TOP */}
-            <div className="bg-white p-3 rounded border border-gray-200 space-y-2">
-                <div className="text-xs font-medium text-gray-500 mb-2">Space Optimization</div>
-
-                <label className="flex items-start gap-2 cursor-pointer hover:bg-gray-50 p-1.5 rounded transition-colors">
-                    <input
-                        type="checkbox"
-                        checked={enableTopUp}
-                        onChange={(e) => {
-                            const newValue = e.target.checked;
-                            setEnableTopUp(newValue);
-                            setTimeout(() => onCalculate(container, materials, packingMode, margins, newValue, enableFullMix, fullMixRotations), 0);
-                        }}
-                        className="mt-0.5"
-                    />
-                    <div className="flex-1">
-                        <div className="text-sm font-medium text-gray-700">Fill Vertical Space</div>
-                        <div className="text-xs text-gray-500">Add flat-oriented boxes above loads to use empty vertical space</div>
+                {/* Container Selection Card */}
+                <section className="bg-[#1E1E1E] rounded-xl border border-[#333] p-4 flex flex-col gap-3 shadow-md">
+                    <div className="flex items-center justify-between">
+                        <h2 className="font-semibold text-[#E0E0E0] flex items-center gap-2 text-sm uppercase tracking-wide">
+                            <ContainerIcon className="w-4 h-4 text-blue-400" /> Container
+                        </h2>
+                        <button onClick={() => setShowEditModal(true)} className="text-gray-400 hover:text-blue-400 transition-colors">
+                            <Pencil className="w-4 h-4" />
+                        </button>
                     </div>
-                </label>
-
-                <label className="flex items-start gap-2 cursor-pointer hover:bg-gray-50 p-1.5 rounded transition-colors">
-                    <input
-                        type="checkbox"
-                        checked={enableFullMix}
+                    <select
+                        value={container.name}
                         onChange={(e) => {
-                            const newValue = e.target.checked;
-                            setEnableFullMix(newValue);
-                            setTimeout(() => onCalculate(container, materials, packingMode, margins, enableTopUp, newValue, fullMixRotations), 0);
+                            const selected = CONTAINER_TYPES.find(c => c.name === e.target.value);
+                            if (selected) {
+                                setContainer(selected);
+                                const newUseDoor = !!selected.doorHeight;
+                                setUseDoorHeight(newUseDoor);
+                                const eff = (selected.doorHeight && !newUseDoor && INNER_HEIGHTS[selected.name])
+                                    ? { ...selected, dimensions: { ...selected.dimensions, height: INNER_HEIGHTS[selected.name] } }
+                                    : selected;
+                                setTimeout(() => onCalculate(eff, materials, packingMode, margins, enableTopUp, enableFullMix, fullMixRotations), 0);
+                            }
                         }}
-                        className="mt-0.5"
-                    />
-                    <div className="flex-1">
-                        <div className="text-sm font-medium text-gray-700">Maximize Space</div>
-                        <div className="text-xs text-gray-500">Aggressively fill all remaining spaces with best-fit orientations</div>
+                        className="w-full bg-[#2A2D34] text-white border border-[#444] rounded-lg px-3 py-2.5 outline-none focus:border-blue-500 transition-colors cursor-pointer"
+                    >
+                        {CONTAINER_TYPES.map(c => (
+                            <option key={c.name} value={c.name}>{c.name}</option>
+                        ))}
+                    </select>
 
-                        {/* Full Mix Orientation Controls */}
-                        {enableFullMix && (
-                            <div className="mt-2 flex gap-3 items-center animate-in fade-in slide-in-from-top-1">
-                                <span className="text-xs font-semibold text-gray-500">Allowed:</span>
-                                <label className="flex items-center gap-1 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={fullMixRotations.x}
-                                        onChange={(e) => {
-                                            const newVal = { ...fullMixRotations, x: e.target.checked };
-                                            setFullMixRotations(newVal);
-                                            setTimeout(() => onCalculate(container, materials, packingMode, margins, enableTopUp, enableFullMix, newVal), 0);
-                                        }}
-                                        className="w-3 h-3 text-blue-600 rounded focus:ring-blue-500"
-                                    />
-                                    <span className="text-xs text-gray-600">Vert (V)</span>
-                                </label>
-                                <label className="flex items-center gap-1 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={fullMixRotations.y}
-                                        onChange={(e) => {
-                                            const newVal = { ...fullMixRotations, y: e.target.checked };
-                                            setFullMixRotations(newVal);
-                                            setTimeout(() => onCalculate(container, materials, packingMode, margins, enableTopUp, enableFullMix, newVal), 0);
-                                        }}
-                                        className="w-3 h-3 text-blue-600 rounded focus:ring-blue-500"
-                                    />
-                                    <span className="text-xs text-gray-600">Horiz (H)</span>
-                                </label>
-                                <label className="flex items-center gap-1 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={fullMixRotations.z}
-                                        onChange={(e) => {
-                                            const newVal = { ...fullMixRotations, z: e.target.checked };
-                                            setFullMixRotations(newVal);
-                                            setTimeout(() => onCalculate(container, materials, packingMode, margins, enableTopUp, enableFullMix, newVal), 0);
-                                        }}
-                                        className="w-3 h-3 text-blue-600 rounded focus:ring-blue-500"
-                                    />
-                                    <span className="text-xs text-gray-600">Flat (F)</span>
-                                </label>
+                    {/* Door / Inner height toggle */}
+                    {container.doorHeight && INNER_HEIGHTS[container.name] && (
+                        <div className="flex items-center justify-between bg-[#2A2D34] p-1.5 rounded-lg border border-[#444]">
+                            <span className="text-xs text-gray-400 font-medium pl-1 hidden sm:inline">Height Mode:</span>
+                            <div className="flex rounded-md overflow-hidden bg-[#1E1E1E] p-0.5">
+                                <button
+                                    onClick={() => {
+                                        setUseDoorHeight(true);
+                                        setTimeout(() => onCalculate(container, materials, packingMode, margins, enableTopUp, enableFullMix, fullMixRotations), 0);
+                                    }}
+                                    className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${useDoorHeight ? 'bg-[#3A3D44] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
+                                    title="Use door aperture height">
+                                    Door
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setUseDoorHeight(false);
+                                        const eff = INNER_HEIGHTS[container.name]
+                                            ? { ...container, dimensions: { ...container.dimensions, height: INNER_HEIGHTS[container.name] } }
+                                            : container;
+                                        setTimeout(() => onCalculate(eff, materials, packingMode, margins, enableTopUp, enableFullMix, fullMixRotations), 0);
+                                    }}
+                                    className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${!useDoorHeight ? 'bg-[#3A3D44] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
+                                    title="Use inner body height">
+                                    Inner
+                                </button>
                             </div>
-                        )}
+                        </div>
+                    )}
+
+                    <div className="text-xs text-gray-500 flex justify-between px-1 font-mono">
+                        <span>L: {effectiveContainer.dimensions.length}</span>
+                        <span>W: {effectiveContainer.dimensions.width}</span>
+                        <span className="flex gap-1 items-center">
+                            H: {effectiveContainer.dimensions.height}
+                            {container.doorHeight && INNER_HEIGHTS[container.name] && (
+                                <span className={useDoorHeight ? "text-orange-900/50" : "text-blue-900/50"}></span>
+                            )}
+                        </span>
                     </div>
-                </label>
+                </section>
 
-                {(enableTopUp || enableFullMix) && (
-                    <div className="flex gap-1 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-200 mt-2">
-                        <div className="mt-0.5">ℹ️</div>
-                        <div>Only applied to fully packed containers</div>
+                {/* Post-Processing Passes — MOVED TO TOP */}
+                {/* Space Optimization Card */}
+                <section className="bg-[#1E1E1E] rounded-xl border border-[#333] p-4 flex flex-col gap-3 shadow-md">
+                    <h2 className="font-semibold text-[#E0E0E0] flex items-center gap-2 text-sm uppercase tracking-wide mb-1">
+                        <Wand2 className="w-4 h-4 text-purple-400" /> Space Optimization
+                    </h2>
+
+                    <div className="flex flex-col gap-3">
+                        {/* Fill Vertical Toggle */}
+                        <div className="flex items-center justify-between border border-[#444] rounded-lg p-2 bg-[#2A2D34] hover:border-[#555] transition-colors">
+                            <div className="flex-1 pr-2">
+                                <div className="text-sm font-semibold text-white">Top Up</div>
+                                <div className="text-[10px] text-gray-400 leading-tight mt-0.5">Fill vertical gaps above loads</div>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    const newValue = !enableTopUp;
+                                    setEnableTopUp(newValue);
+                                    setTimeout(() => onCalculate(container, materials, packingMode, margins, newValue, enableFullMix, fullMixRotations), 0);
+                                }}
+                                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${enableTopUp ? 'bg-blue-500' : 'bg-[#444]'}`}
+                            >
+                                <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${enableTopUp ? 'translate-x-4' : 'translate-x-0'}`} />
+                            </button>
+                        </div>
+
+                        {/* Maximize Space Toggle */}
+                        <div className="flex flex-col border border-[#444] rounded-lg p-2 bg-[#2A2D34] hover:border-[#555] transition-colors">
+                            <div className="flex items-center justify-between pointer-events-auto">
+                                <div className="flex-1 pr-2">
+                                    <div className="text-sm font-semibold text-white">Full Mix</div>
+                                    <div className="text-[10px] text-gray-400 leading-tight mt-0.5">Aggressive void filling</div>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        const newValue = !enableFullMix;
+                                        setEnableFullMix(newValue);
+                                        setTimeout(() => onCalculate(container, materials, packingMode, margins, enableTopUp, newValue, fullMixRotations), 0);
+                                    }}
+                                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${enableFullMix ? 'bg-purple-500' : 'bg-[#444]'}`}
+                                >
+                                    <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${enableFullMix ? 'translate-x-4' : 'translate-x-0'}`} />
+                                </button>
+                            </div>
+
+                            {/* Full Mix Rotations */}
+                            {enableFullMix && (
+                                <div className="mt-3 pt-3 border-t border-[#444] grid grid-cols-3 gap-1 animate-in fade-in zoom-in duration-200">
+                                    <button
+                                        onClick={() => {
+                                            const newVal = { ...fullMixRotations, x: !fullMixRotations.x };
+                                            setFullMixRotations(newVal);
+                                            setTimeout(() => onCalculate(container, materials, packingMode, margins, enableTopUp, enableFullMix, newVal), 0);
+                                        }}
+                                        className={`py-1 text-[10px] font-semibold rounded text-center border transition-all ${fullMixRotations.x ? 'bg-purple-500/20 text-purple-300 border-purple-500/50 shadow-sm' : 'bg-[#1E1E1E] text-gray-500 border-[#333] hover:border-[#555]'}`}
+                                    >Vert</button>
+                                    <button
+                                        onClick={() => {
+                                            const newVal = { ...fullMixRotations, y: !fullMixRotations.y };
+                                            setFullMixRotations(newVal);
+                                            setTimeout(() => onCalculate(container, materials, packingMode, margins, enableTopUp, enableFullMix, newVal), 0);
+                                        }}
+                                        className={`py-1 text-[10px] font-semibold rounded text-center border transition-all ${fullMixRotations.y ? 'bg-purple-500/20 text-purple-300 border-purple-500/50 shadow-sm' : 'bg-[#1E1E1E] text-gray-500 border-[#333] hover:border-[#555]'}`}
+                                    >Horiz</button>
+                                    <button
+                                        onClick={() => {
+                                            const newVal = { ...fullMixRotations, z: !fullMixRotations.z };
+                                            setFullMixRotations(newVal);
+                                            setTimeout(() => onCalculate(container, materials, packingMode, margins, enableTopUp, enableFullMix, newVal), 0);
+                                        }}
+                                        className={`py-1 text-[10px] font-semibold rounded text-center border transition-all ${fullMixRotations.z ? 'bg-purple-500/20 text-purple-300 border-purple-500/50 shadow-sm' : 'bg-[#1E1E1E] text-gray-500 border-[#333] hover:border-[#555]'}`}
+                                    >Flat</button>
+                                </div>
+                            )}
+                        </div>
                     </div>
-                )}
-            </div>
+                </section>
 
-            {/* Packing Mode Selection */}
-            <div className="flex flex-col gap-2 pb-4 border-b border-gray-200">
-                <h3 className="text-sm font-semibold text-gray-700">Multi-Material Mode</h3>
-                <div className="flex flex-col gap-2">
-                    <label className="flex items-start gap-2 cursor-pointer">
-                        <input
-                            type="radio"
-                            name="packingMode"
-                            value="SEQUENTIAL"
-                            checked={packingMode === 'SEQUENTIAL'}
-                            onChange={() => setPackingMode('SEQUENTIAL')}
-                            className="mt-1"
-                        />
-                        <span className="text-sm text-gray-700">
-                            <span className="font-medium">Sequential</span> – Materials share containers, no mixing
-                        </span>
-                    </label>
+                {/* Packing Mode Selection */}
+                <div className="flex flex-col gap-2 pb-4">
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Multi-Material Mode</h3>
+                    <div className="flex bg-[#2A2D34] p-1.5 rounded-lg border border-[#444]">
+                        <button
+                            onClick={() => setPackingMode('SEQUENTIAL')}
+                            className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all ${packingMode === 'SEQUENTIAL' ? 'bg-[#3A3D44] text-white shadow-sm' : 'text-gray-400 hover:text-gray-200'}`}
+                        >
+                            Sequential
+                        </button>
+                        <button
+                            onClick={() => setPackingMode('SMART_STACK')}
+                            className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all ${packingMode === 'SMART_STACK' ? 'bg-[#3A3D44] text-white shadow-sm' : 'text-gray-400 hover:text-gray-200'}`}
+                        >
+                            Smart Stack
+                        </button>
+                    </div>
 
-                    <label className="flex items-start gap-2 cursor-pointer">
-                        <input
-                            type="radio"
-                            name="packingMode"
-                            value="SMART_STACK"
-                            checked={packingMode === 'SMART_STACK'}
-                            onChange={() => setPackingMode('SMART_STACK')}
-                            className="mt-1"
-                        />
-                        <span className="text-sm text-gray-700">
-                            <span className="font-medium">Smart Stack</span> – Mix materials if space allows (with Fill/Maximize)
-                        </span>
-                    </label>
-
-                    <label className="flex items-start gap-2 cursor-not-allowed opacity-60">
-                        <input
-                            type="radio"
-                            name="packingMode"
-                            value="TETRIS"
-                            checked={packingMode === 'TETRIS'}
-                            disabled={true}
-                            className="mt-1 cursor-not-allowed"
-                        />
-                        <span className="text-sm text-gray-700">
-                            <span className="font-medium">Tetris (Coming Soon)</span> – Free-form optimal packing
-                        </span>
-                    </label>
+                    {/* Visual Validation for SMART_STACK */}
+                    {packingMode === 'SMART_STACK' && (
+                        <div className="mt-1 p-2 bg-blue-900/20 border border-blue-800/50 rounded-lg text-[10px] text-blue-300 flex items-start gap-1.5 animate-in fade-in zoom-in duration-200">
+                            <span className="font-bold flex-shrink-0 mt-0.5">ℹ️</span>
+                            <span className="leading-tight">Mixes materials in the same container to achieve optimal density.</span>
+                        </div>
+                    )}
                 </div>
 
-                {/* Visual Validation for SMART_STACK */}
-                {packingMode === 'SMART_STACK' && (
-                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800 flex flex-col gap-1">
-                        <span className="font-bold flex items-center gap-1">ℹ️ Smart Stack Mode</span>
-                        <span>Materials fill remaining space in each other's containers when Fill or Maximize is enabled</span>
-                    </div>
-                )}
-            </div>
-
-            {/* Margins — Collapsed by default */}
-            <div className="border-b border-gray-200 pb-3">
-                <button
-                    onClick={() => setShowMargins(!showMargins)}
-                    className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors w-full"
-                >
-                    <Settings className="w-3.5 h-3.5" />
-                    <span>Margins ({margins.length}/{margins.width}/{margins.height} mm)</span>
-                    <span className={`ml-auto text-xs transition-transform ${showMargins ? 'rotate-180' : ''}`}>▼</span>
-                </button>
-                {showMargins && (
-                    <div className="mt-2 bg-white p-2 rounded border border-gray-200 animate-in fade-in slide-in-from-top-1">
-                        <div className="grid grid-cols-3 gap-2">
-                            <div>
-                                <label className="text-[10px] text-gray-400 block">Length</label>
+                {/* Margins */}
+                <section className="bg-[#1E1E1E] rounded-xl border border-[#333] p-3 shadow-md mt-2">
+                    <button
+                        onClick={() => setShowMargins(!showMargins)}
+                        className="flex items-center justify-between w-full text-sm font-semibold text-[#E0E0E0] hover:text-white transition-colors uppercase tracking-wide"
+                    >
+                        <div className="flex items-center gap-2">
+                            <Settings className="w-4 h-4 text-orange-400" />
+                            <span>Margins <span className="text-gray-500 text-xs font-mono ml-1">({margins.length}/{margins.width}/{margins.height})</span></span>
+                        </div>
+                        <span className={`text-xs text-gray-500 transition-transform ${showMargins ? 'rotate-180' : ''}`}>▼</span>
+                    </button>
+                    {showMargins && (
+                        <div className="mt-3 grid grid-cols-3 gap-2 animate-in fade-in slide-in-from-top-1">
+                            <div className="bg-[#2A2D34] rounded-lg border border-[#444] p-1.5 focus-within:border-blue-500">
+                                <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">Length</label>
                                 <input
                                     type="number"
                                     value={margins.length}
                                     onChange={(e) => setMargins({ ...margins, length: parseInt(e.target.value) || 0 })}
                                     onKeyDown={handleKeyDown}
-                                    className="w-full p-1 border rounded text-sm"
+                                    className="w-full bg-transparent text-white text-sm outline-none text-center font-mono"
                                 />
                             </div>
-                            <div>
-                                <label className="text-[10px] text-gray-400 block">Width</label>
+                            <div className="bg-[#2A2D34] rounded-lg border border-[#444] p-1.5 focus-within:border-blue-500">
+                                <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">Width</label>
                                 <input
                                     type="number"
                                     value={margins.width}
                                     onChange={(e) => setMargins({ ...margins, width: parseInt(e.target.value) || 0 })}
                                     onKeyDown={handleKeyDown}
-                                    className="w-full p-1 border rounded text-sm"
+                                    className="w-full bg-transparent text-white text-sm outline-none text-center font-mono"
                                 />
                             </div>
-                            <div>
-                                <label className="text-[10px] text-gray-400 block">Height</label>
+                            <div className="bg-[#2A2D34] rounded-lg border border-[#444] p-1.5 focus-within:border-blue-500">
+                                <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">Height</label>
                                 <input
                                     type="number"
                                     value={margins.height}
                                     onChange={(e) => setMargins({ ...margins, height: parseInt(e.target.value) || 0 })}
                                     onKeyDown={handleKeyDown}
-                                    className="w-full p-1 border rounded text-sm"
+                                    className="w-full bg-transparent text-white text-sm outline-none text-center font-mono"
                                 />
+                            </div>
+                        </div>
+                    )}
+                </section>
+
+                {/* Materials Tabs */}
+                <div className="flex flex-wrap gap-1 pb-1 mt-4">
+                    {materials.map(m => (
+                        <div
+                            key={m.id}
+                            onClick={() => setActiveTabId(m.id)}
+                            className={`
+                            relative px-3 py-2 rounded-t-lg text-sm font-semibold cursor-pointer flex items-center gap-2 transition-colors border
+                            ${activeTabId === m.id ? 'bg-[#1E1E1E] border-[#333] border-b-[#1E1E1E] text-white z-10' : 'bg-[#121212] border-transparent text-gray-500 hover:text-gray-300'}
+                        `}
+                            style={{
+                                borderTop: activeTabId === m.id ? `3px solid ${m.box.color}` : '1px solid transparent',
+                                marginBottom: activeTabId === m.id ? '-1px' : '0'
+                            }}
+                        >
+                            <span>Mat {m.id}</span>
+                            {materials.length > 1 && (
+                                <button
+                                    onClick={(e) => handleRemoveMaterial(m.id, e)}
+                                    className="hover:text-red-500 p-0.5 rounded transition-colors"
+                                    title="Remove"
+                                >
+                                    <X className="w-3 h-3" />
+                                </button>
+                            )}
+                        </div>
+                    ))}
+
+                    {/* Add Material Button */}
+                    <div className="flex items-center gap-1 ml-1 self-end pb-1">
+                        {materials.length < 100 && (
+                            <>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="10"
+                                    value={addCount}
+                                    onChange={(e) => setAddCount(Math.max(1, Math.min(10, parseInt(e.target.value) || 1)))}
+                                    className="w-10 p-1 text-xs bg-[#2A2D34] text-white border border-[#444] rounded text-center h-8 outline-none focus:border-blue-500 transition-colors"
+                                    title="Count to add"
+                                />
+                                <button
+                                    onClick={handleAddMaterial}
+                                    className="p-1.5 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded hover:bg-blue-600/40 hover:text-blue-300 transition-colors h-8 w-8 flex items-center justify-center"
+                                    title={`Add ${addCount} Material(s)`}
+                                >
+                                    <Plus className="w-4 h-4" />
+                                </button>
+                            </>
+                        )}
+                    </div>
+                </div>
+
+                {/* Active Material Inputs */}
+                <div className="bg-[#1E1E1E] rounded-b-xl rounded-tr-xl border border-[#333] p-4 flex flex-col gap-5 shadow-md animate-in fade-in zoom-in duration-200 relative z-0 mb-20" onKeyDown={handleKeyDown}>
+                    {/* Header Actions */}
+                    <div className="flex justify-between items-center border-b border-[#333] pb-2">
+                        <h2 className="font-bold text-white flex items-center gap-2">
+                            <span style={{ color: activeMaterial.box.color }}>Material {activeMaterial.id} Settings</span>
+                        </h2>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={(e) => handleDuplicateMaterial(activeMaterial.id, e)}
+                                className="text-gray-400 hover:text-blue-400 p-1 transition-colors"
+                                title="Duplicate Material"
+                            >
+                                <Copy className="w-4 h-4" />
+                            </button>
+                            <button
+                                onClick={(e) => handleRemoveMaterial(activeMaterial.id, e)}
+                                className="text-gray-400 hover:text-red-400 p-1 transition-colors"
+                                title="Delete Material"
+                                disabled={materials.length <= 1}
+                            >
+                                <Trash2 className="w-4 h-4" />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Box Dimensions */}
+                    <section className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <h3 className="font-semibold text-[#E0E0E0] flex items-center gap-2 text-sm uppercase tracking-wide">
+                                <BoxIcon className="w-4 h-4 text-blue-400" /> Box Dimensions
+                                <span className="text-gray-500 text-[10px] font-mono lowercase">(mm)</span>
+                            </h3>
+                            <div className="flex items-center gap-2 bg-[#2A2D34] px-2 py-1 rounded-md border border-[#444]">
+                                <label className="text-[10px] uppercase font-semibold text-gray-400">Wgt<span className="text-gray-500 lowercase">(kg)</span></label>
+                                <input
+                                    type="number"
+                                    value={activeMaterial.box.weightKg || ''}
+                                    onChange={(e) => updateBox(activeMaterial.id, { weightKg: e.target.value ? Number(e.target.value) : undefined })}
+                                    className="w-12 bg-transparent text-white text-sm outline-none text-right font-mono"
+                                    placeholder="Opt"
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                            <div className="bg-[#2A2D34] rounded-lg border border-[#444] p-1.5 focus-within:border-blue-500 shadow-inner">
+                                <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">Length</label>
+                                <input
+                                    type="number"
+                                    value={activeMaterial.box.dimensions.length}
+                                    onChange={(e) => updateBoxDims(activeMaterial.id, 'length', Number(e.target.value))}
+                                    onPaste={(e) => handlePaste(e,
+                                        (l) => updateBoxDims(activeMaterial.id, 'length', l),
+                                        (w) => updateBoxDims(activeMaterial.id, 'width', w),
+                                        (h) => updateBoxDims(activeMaterial.id, 'height', h)
+                                    )}
+                                    className="w-full bg-transparent text-white text-base outline-none text-center font-mono"
+                                />
+                            </div>
+                            <div className="bg-[#2A2D34] rounded-lg border border-[#444] p-1.5 focus-within:border-blue-500 shadow-inner">
+                                <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">Width</label>
+                                <input
+                                    type="number"
+                                    value={activeMaterial.box.dimensions.width}
+                                    onChange={(e) => updateBoxDims(activeMaterial.id, 'width', Number(e.target.value))}
+                                    className="w-full bg-transparent text-white text-base outline-none text-center font-mono"
+                                />
+                            </div>
+                            <div className="bg-[#2A2D34] rounded-lg border border-[#444] p-1.5 focus-within:border-blue-500 shadow-inner">
+                                <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">Height</label>
+                                <input
+                                    type="number"
+                                    value={activeMaterial.box.dimensions.height}
+                                    onChange={(e) => updateBoxDims(activeMaterial.id, 'height', Number(e.target.value))}
+                                    className="w-full bg-transparent text-white text-base outline-none text-center font-mono"
+                                />
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Stacking Options */}
+                    <section className="space-y-3">
+                        <div className="flex justify-between items-center">
+                            <h3 className="font-semibold text-[#E0E0E0] flex items-center gap-2 text-sm uppercase tracking-wide">
+                                <Settings className="w-4 h-4 text-purple-400" /> Stacking Options
+                            </h3>
+                            <div className="flex gap-2">
+                                {/* Optimization Button */}
+                                {activeOptimization && (
+                                    <button
+                                        onClick={handleApplyOptimization}
+                                        className="px-2 py-1 text-xs font-bold text-white bg-green-600/80 rounded hover:bg-green-500 animate-pulse shadow-sm flex items-center gap-1 border border-green-500/50"
+                                        title={`Optimize: Switch to ${activeOptimization.recommendedPreference} orientation`}
+                                    >
+                                        <Wand2 className="w-3 h-3" /> Optimize
+                                    </button>
+                                )}
+
+                                {/* Rotate Button */}
+                                <button
+                                    onClick={handleRotateToggle}
+                                    className="p-1 text-gray-400 hover:text-blue-400 border border-[#444] rounded bg-[#2A2D34] hover:border-[#555] transition-colors"
+                                    title={`Rotate Orientation (Current: ${activeMaterial.orientationPreference || 'default'})`}
+                                >
+                                    <div className={`transform transition-transform ${activeMaterial.orientationPreference === 'rotated' ? 'rotate-90' : ''}`}>
+                                        <BoxIcon className="w-4 h-4" />
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+                        <div className="bg-[#2A2D34] p-1.5 rounded-lg border border-[#444]">
+                            <div className="flex justify-between gap-1.5">
+                                <label className={`flex-1 flex flex-col items-center justify-center gap-2 p-2 rounded cursor-pointer border transition-colors ${activeMaterial.box.allowedRotations.x ? 'bg-[#3A3D44] border-blue-500/50 shadow-sm' : 'hover:bg-[#333] border-transparent'}`}>
+                                    <input
+                                        type="checkbox"
+                                        checked={activeMaterial.box.allowedRotations.x}
+                                        onChange={(e) => updateBox(activeMaterial.id, { allowedRotations: { ...activeMaterial.box.allowedRotations, x: e.target.checked } })}
+                                        className="hidden"
+                                    />
+                                    <div className="w-8 h-8 flex items-end justify-center">
+                                        <div className="w-4 h-8 bg-blue-500/80 rounded-sm border border-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.3)]"></div>
+                                    </div>
+                                    <span className={`text-[10px] uppercase font-bold tracking-wider ${activeMaterial.box.allowedRotations.x ? 'text-blue-300' : 'text-gray-500'}`}>Vertical</span>
+                                </label>
+
+                                <label className={`flex-1 flex flex-col items-center justify-center gap-2 p-2 rounded cursor-pointer border transition-colors ${activeMaterial.box.allowedRotations.y ? 'bg-[#3A3D44] border-blue-500/50 shadow-sm' : 'hover:bg-[#333] border-transparent'}`}>
+                                    <input
+                                        type="checkbox"
+                                        checked={activeMaterial.box.allowedRotations.y}
+                                        onChange={(e) => updateBox(activeMaterial.id, { allowedRotations: { ...activeMaterial.box.allowedRotations, y: e.target.checked } })}
+                                        className="hidden"
+                                    />
+                                    <div className="w-8 h-8 flex items-end justify-center">
+                                        <div className="w-8 h-4 bg-blue-500/80 rounded-sm border border-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.3)]"></div>
+                                    </div>
+                                    <span className={`text-[10px] uppercase font-bold tracking-wider ${activeMaterial.box.allowedRotations.y ? 'text-blue-300' : 'text-gray-500'}`}>Horizontal</span>
+                                </label>
+
+                                <label className={`flex-1 flex flex-col items-center justify-center gap-2 p-2 rounded cursor-pointer border transition-colors ${activeMaterial.box.allowedRotations.z ? 'bg-[#3A3D44] border-blue-500/50 shadow-sm' : 'hover:bg-[#333] border-transparent'}`}>
+                                    <input
+                                        type="checkbox"
+                                        checked={activeMaterial.box.allowedRotations.z}
+                                        onChange={(e) => updateBox(activeMaterial.id, { allowedRotations: { ...activeMaterial.box.allowedRotations, z: e.target.checked } })}
+                                        className="hidden"
+                                    />
+                                    <div className="w-8 h-8 flex items-end justify-center perspective-[100px]">
+                                        <div className="w-8 h-6 bg-blue-500/80 rounded-sm border border-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.3)] transform rotate-x-60"></div>
+                                    </div>
+                                    <span className={`text-[10px] uppercase font-bold tracking-wider ${activeMaterial.box.allowedRotations.z ? 'text-blue-300' : 'text-gray-500'}`}>Flat</span>
+                                </label>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Layer Configuration */}
+                    <section className="space-y-3">
+                        <h3 className="font-semibold text-[#E0E0E0] flex items-center gap-2 text-sm uppercase tracking-wide">
+                            <Layers className="w-4 h-4 text-pink-400" /> Layer Configuration
+                        </h3>
+                        <div className="space-y-2">
+                            <div className="bg-[#2A2D34] rounded-lg border border-[#444] p-1.5 focus-within:border-blue-500 shadow-inner">
+                                <input
+                                    type="text"
+                                    value={activeMaterial.layerConfig}
+                                    onChange={(e) => updateMaterial(activeMaterial.id, { layerConfig: e.target.value })}
+                                    placeholder="No constraint (full fill)"
+                                    className="w-full bg-transparent text-white text-base outline-none text-center font-mono placeholder-[#555]"
+                                    title="Enter 'AxB' to apply strict layer constraints"
+                                />
+                            </div>
+                            <div className="flex justify-between items-center px-1">
+                                <div className="text-[10px] text-gray-500 font-mono">
+                                    Format: [items]x[layers] (e.g., "6x3")
+                                </div>
+                                <button
+                                    onClick={() => handleOptimize(activeMaterial.id)}
+                                    disabled={isOptimizing}
+                                    className="text-[10px] uppercase font-bold text-gray-400 hover:text-pink-400 flex items-center gap-1 transition-colors"
+                                >
+                                    {isOptimizing && optimizingMaterialId === activeMaterial.id ? (
+                                        <span className="animate-spin">⌛</span>
+                                    ) : (
+                                        <Wand2 className="w-3 h-3" />
+                                    )}
+                                    Optimize
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Pallet Settings */}
+                    <section className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <h3 className="font-semibold text-[#E0E0E0] flex items-center gap-2 text-sm uppercase tracking-wide">
+                                <Settings className="w-4 h-4 text-orange-400" /> Pallet
+                            </h3>
+                            <button
+                                onClick={() => updatePallet(activeMaterial.id, { usePallet: !activeMaterial.pallet.usePallet })}
+                                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${activeMaterial.pallet.usePallet ? 'bg-orange-500' : 'bg-[#444]'}`}
+                            >
+                                <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${activeMaterial.pallet.usePallet ? 'translate-x-4' : 'translate-x-0'}`} />
+                            </button>
+                        </div>
+
+                        <button
+                            onClick={() => calculatePerfectPallet(activeMaterial)}
+                            disabled={!isConfigValid(activeMaterial.layerConfig)}
+                            className={`w-full py-2 px-3 rounded-lg flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider transition-colors ${isConfigValid(activeMaterial.layerConfig)
+                                ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30 hover:bg-blue-600/40 hover:text-blue-300'
+                                : 'bg-[#2A2D34] text-gray-600 border border-[#333] cursor-not-allowed'
+                                }`}
+                        >
+                            <Calculator className="w-4 h-4" />
+                            Create Pallet from Config
+                        </button>
+
+                        {activeMaterial.pallet.usePallet && (
+                            <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div className="bg-[#2A2D34] rounded-lg border border-[#444] p-1.5 focus-within:border-blue-500 shadow-inner">
+                                        <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">Length</label>
+                                        <input
+                                            type="number"
+                                            value={activeMaterial.pallet.dimensions.length}
+                                            onChange={(e) => updatePalletDims(activeMaterial.id, 'length', Number(e.target.value))}
+                                            className="w-full bg-transparent text-white text-base outline-none text-center font-mono"
+                                        />
+                                    </div>
+                                    <div className="bg-[#2A2D34] rounded-lg border border-[#444] p-1.5 focus-within:border-blue-500 shadow-inner">
+                                        <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">Width</label>
+                                        <input
+                                            type="number"
+                                            value={activeMaterial.pallet.dimensions.width}
+                                            onChange={(e) => updatePalletDims(activeMaterial.id, 'width', Number(e.target.value))}
+                                            className="w-full bg-transparent text-white text-base outline-none text-center font-mono"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex gap-2">
+                                    <div className="flex-1 bg-[#2A2D34] rounded-lg border border-[#444] p-1.5 focus-within:border-blue-500 shadow-inner">
+                                        <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">Max Load Height</label>
+                                        <input
+                                            type="number"
+                                            value={activeMaterial.pallet.maxLoadHeight}
+                                            onChange={(e) => updatePallet(activeMaterial.id, { maxLoadHeight: Number(e.target.value) })}
+                                            className="w-full bg-transparent text-white text-base outline-none text-center font-mono"
+                                        />
+                                    </div>
+                                    <div className="w-20 bg-[#2A2D34] rounded-lg border border-[#444] p-1.5 focus-within:border-blue-500 shadow-inner">
+                                        <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">Wgt(kg)</label>
+                                        <input
+                                            type="number"
+                                            value={activeMaterial.pallet.weightKg || ''}
+                                            onChange={(e) => updatePallet(activeMaterial.id, { weightKg: e.target.value ? Number(e.target.value) : undefined })}
+                                            className="w-full bg-transparent text-white text-base outline-none text-center font-mono"
+                                            placeholder="Opt"
+                                        />
+                                    </div>
+                                </div>
+                                <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer p-2.5 bg-[#2A2D34] rounded-lg border border-[#444] hover:border-[#555] transition-colors mt-2">
+                                    <input
+                                        type="checkbox"
+                                        checked={activeMaterial.pallet.stackPallets || false}
+                                        onChange={(e) => updatePallet(activeMaterial.id, { stackPallets: e.target.checked })}
+                                        className="w-4 h-4 text-orange-500 bg-[#1E1E1E] border-[#555] rounded focus:ring-orange-500 focus:ring-offset-[#2A2D34]"
+                                    />
+                                    <div className="flex items-center gap-1.5">
+                                        <Layers className="w-4 h-4 text-orange-400" />
+                                        <span className="font-medium text-xs">Stack Pallets (max 2)</span>
+                                    </div>
+                                </label>
+                            </div>
+                        )}
+                    </section>
+
+                    {/* Quantity */}
+                    <section className="space-y-2">
+                        <h3 className="font-semibold text-[#E0E0E0] text-sm uppercase tracking-wide">Quantity</h3>
+                        <div className="bg-[#2A2D34] rounded-lg border border-[#444] p-2 focus-within:border-blue-500 shadow-inner">
+                            <input
+                                type="number"
+                                value={activeMaterial.quantity}
+                                onChange={(e) => updateMaterial(activeMaterial.id, { quantity: Number(e.target.value) })}
+                                className="w-full bg-transparent text-white text-xl outline-none text-center font-black font-mono pl-4 tracking-widest"
+                            />
+                        </div>
+                    </section>
+                </div>
+
+                {/* Recalculate Button (Sticky Bottom) */}
+                <div className="sticky bottom-0 left-0 right-0 bg-gradient-to-t from-[#121212] via-[#121212] to-transparent pt-6 pb-4 px-4 -mx-4 z-40 mt-auto">
+                    <button
+                        onClick={handleRecalculate}
+                        className="w-full relative group overflow-hidden bg-blue-600 text-white py-3.5 rounded-xl font-bold shadow-[0_0_20px_rgba(37,99,235,0.4)] hover:shadow-[0_0_30px_rgba(37,99,235,0.6)] transition-all flex items-center justify-center gap-2"
+                    >
+                        <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-500 group-hover:from-blue-500 group-hover:to-blue-400 transition-colors"></div>
+                        <Calculator className="w-5 h-5 relative z-10" />
+                        <span className="relative z-10 text-[15px] tracking-wide uppercase">Recalculate</span>
+                    </button>
+                </div>
+
+                {/* Modals */}
+                {showEditModal && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg shadow-xl w-96 overflow-hidden">
+                            <div className="flex items-center justify-between p-4 border-b">
+                                <h3 className="font-bold text-lg text-gray-800">Edit Containers</h3>
+                                <button onClick={() => setShowEditModal(false)} className="p-1 hover:bg-gray-100 rounded">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                            <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
+                                {editableContainers.map((c, idx) => (
+                                    <div key={c.name} className="border p-3 rounded bg-gray-50">
+                                        <div className="font-semibold text-sm mb-2">{c.name}</div>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            <div>
+                                                <label className="text-xs text-gray-500">Length</label>
+                                                <input
+                                                    type="number"
+                                                    value={c.dimensions.length}
+                                                    onChange={(e) => handleContainerDimensionChange(idx, 'length', Number(e.target.value))}
+                                                    className="w-full p-1 border rounded text-sm"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-xs text-gray-500">Width</label>
+                                                <input
+                                                    type="number"
+                                                    value={c.dimensions.width}
+                                                    onChange={(e) => handleContainerDimensionChange(idx, 'width', Number(e.target.value))}
+                                                    className="w-full p-1 border rounded text-sm"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-xs text-gray-500">Height</label>
+                                                <input
+                                                    type="number"
+                                                    value={c.dimensions.height}
+                                                    onChange={(e) => handleContainerDimensionChange(idx, 'height', Number(e.target.value))}
+                                                    className="w-full p-1 border rounded text-sm"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="p-4 border-t bg-gray-50 flex justify-end gap-2">
+                                <button onClick={() => setShowEditModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancel</button>
+                                <button onClick={handleSaveContainers} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Save</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {showOptimizationModal && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg shadow-xl w-96 overflow-hidden">
+                            <div className="flex items-center justify-between p-4 border-b bg-purple-50">
+                                <h3 className="font-bold text-lg text-purple-800 flex items-center gap-2">
+                                    <Wand2 className="w-5 h-5" /> Optimization Suggestions
+                                </h3>
+                                <button onClick={() => setShowOptimizationModal(false)} className="p-1 hover:bg-purple-100 rounded text-purple-700">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                            <div className="p-4 space-y-2">
+                                <p className="text-sm text-gray-600 mb-2">
+                                    Best configurations found for Material {optimizingMaterialId}:
+                                </p>
+                                {optimizationSuggestions.length === 0 ? (
+                                    <div className="text-center text-gray-500 py-4">No better configurations found.</div>
+                                ) : (
+                                    optimizationSuggestions.map((sugg, idx) => (
+                                        <button
+                                            key={idx}
+                                            onClick={() => applyOptimization(sugg.config)}
+                                            className="w-full text-left p-3 border rounded hover:bg-purple-50 hover:border-purple-300 transition-colors group"
+                                        >
+                                            <div className="flex justify-between items-center mb-1">
+                                                <span className="font-bold text-gray-800">{sugg.config}</span>
+                                                <span className="text-xs font-semibold bg-green-100 text-green-700 px-2 py-0.5 rounded">
+                                                    {sugg.containers} Container{sugg.containers > 1 ? 's' : ''}
+                                                </span>
+                                            </div>
+                                            <div className="text-xs text-gray-500 flex justify-between">
+                                                <span>{sugg.itemsPerLayer} items/layer × {sugg.layers} layers</span>
+                                                <span className="group-hover:text-purple-600">Apply →</span>
+                                            </div>
+                                        </button>
+                                    ))
+                                )}
                             </div>
                         </div>
                     </div>
                 )}
             </div>
-
-            {/* Materials Tabs */}
-            <div className="flex flex-wrap gap-1 border-b border-gray-200 pb-1">
-                {materials.map(m => (
-                    <div
-                        key={m.id}
-                        onClick={() => setActiveTabId(m.id)}
-                        className={`
-                            relative px-3 py-2 rounded-t-lg text-sm font-medium cursor-pointer flex items-center gap-2 transition-colors
-                            ${activeTabId === m.id ? 'bg-white border border-b-0 border-gray-200 text-blue-600' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}
-                        `}
-                        style={{ borderTop: activeTabId === m.id ? `3px solid ${m.box.color}` : undefined }}
-                    >
-                        <span>Mat {m.id}</span>
-                        {materials.length > 1 && (
-                            <button
-                                onClick={(e) => handleRemoveMaterial(m.id, e)}
-                                className="hover:text-red-500 p-0.5 rounded"
-                                title="Remove"
-                            >
-                                <X className="w-3 h-3" />
-                            </button>
-                        )}
-                    </div>
-                ))}
-
-                {/* Add Material Button */}
-                <div className="flex items-center gap-1 ml-1">
-                    {materials.length < 100 && (
-                        <>
-                            <input
-                                type="number"
-                                min="1"
-                                max="10"
-                                value={addCount}
-                                onChange={(e) => setAddCount(Math.max(1, Math.min(10, parseInt(e.target.value) || 1)))}
-                                className="w-10 p-1 text-xs border rounded text-center h-8"
-                                title="Count to add"
-                            />
-                            <button
-                                onClick={handleAddMaterial}
-                                className="p-2 bg-blue-100 text-blue-600 rounded hover:bg-blue-200 transition-colors h-8 w-8 flex items-center justify-center"
-                                title={`Add ${addCount} Material(s)`}
-                            >
-                                <Plus className="w-4 h-4" />
-                            </button>
-                        </>
-                    )}
-                </div>
-            </div>
-
-            {/* Active Material Inputs */}
-            <div className="animate-in fade-in slide-in-from-bottom-2 space-y-6" onKeyDown={handleKeyDown}>
-                {/* Header Actions */}
-                <div className="flex justify-between items-center">
-                    <h2 className="font-bold text-gray-800 flex items-center gap-2">
-                        <span style={{ color: activeMaterial.box.color }}>Material {activeMaterial.id} Settings</span>
-                    </h2>
-                    <div className="flex gap-2">
-                        <button
-                            onClick={(e) => handleDuplicateMaterial(activeMaterial.id, e)}
-                            className="text-gray-400 hover:text-blue-600 p-1"
-                            title="Duplicate Material"
-                        >
-                            <Copy className="w-4 h-4" />
-                        </button>
-                        <button
-                            onClick={(e) => handleRemoveMaterial(activeMaterial.id, e)}
-                            className="text-gray-400 hover:text-red-600 p-1"
-                            title="Delete Material"
-                            disabled={materials.length <= 1}
-                        >
-                            <Trash2 className="w-4 h-4" />
-                        </button>
-                    </div>
-                </div>
-
-                {/* Box Dimensions */}
-                <section className="space-y-3">
-                    <div className="flex items-center justify-between">
-                        <h3 className="font-semibold text-gray-700 flex items-center gap-2 text-sm">
-                            <BoxIcon className="w-4 h-4" /> Box Dimensions (mm)
-                        </h3>
-                        <div className="flex items-center gap-1">
-                            <label className="text-xs text-gray-500">Wgt(kg)</label>
-                            <input
-                                type="number"
-                                value={activeMaterial.box.weightKg || ''}
-                                onChange={(e) => updateBox(activeMaterial.id, { weightKg: e.target.value ? Number(e.target.value) : undefined })}
-                                className="w-16 p-1 border rounded text-sm text-right"
-                                placeholder="Opt"
-                            />
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                        <div>
-                            <label className="text-xs text-gray-500">Length</label>
-                            <input
-                                type="number"
-                                value={activeMaterial.box.dimensions.length}
-                                onChange={(e) => updateBoxDims(activeMaterial.id, 'length', Number(e.target.value))}
-                                onPaste={(e) => handlePaste(e,
-                                    (l) => updateBoxDims(activeMaterial.id, 'length', l),
-                                    (w) => updateBoxDims(activeMaterial.id, 'width', w),
-                                    (h) => updateBoxDims(activeMaterial.id, 'height', h)
-                                )}
-                                className="w-full p-3 border rounded text-base h-12"
-                            />
-                        </div>
-                        <div>
-                            <label className="text-xs text-gray-500">Width</label>
-                            <input
-                                type="number"
-                                value={activeMaterial.box.dimensions.width}
-                                onChange={(e) => updateBoxDims(activeMaterial.id, 'width', Number(e.target.value))}
-                                className="w-full p-3 border rounded text-base h-12"
-                            />
-                        </div>
-                        <div>
-                            <label className="text-xs text-gray-500">Height</label>
-                            <input
-                                type="number"
-                                value={activeMaterial.box.dimensions.height}
-                                onChange={(e) => updateBoxDims(activeMaterial.id, 'height', Number(e.target.value))}
-                                className="w-full p-3 border rounded text-base h-12"
-                            />
-                        </div>
-                    </div>
-                </section>
-
-                {/* Stacking Options */}
-                <section className="space-y-3">
-                    <div className="flex justify-between items-center">
-                        <h3 className="font-semibold text-gray-700 flex items-center gap-2 text-sm">
-                            <Settings className="w-4 h-4" /> Stacking Options
-                        </h3>
-                        <div className="flex gap-2">
-                            {/* Optimization Button */}
-                            {activeOptimization && (
-                                <button
-                                    onClick={handleApplyOptimization}
-                                    className="px-2 py-1 text-xs font-bold text-white bg-green-500 rounded hover:bg-green-600 animate-pulse shadow-sm flex items-center gap-1"
-                                    title={`Optimize: Switch to ${activeOptimization.recommendedPreference} orientation`}
-                                >
-                                    <Wand2 className="w-3 h-3" /> Optimize
-                                </button>
-                            )}
-
-                            {/* Rotate Button */}
-                            <button
-                                onClick={handleRotateToggle}
-                                className="p-1 text-gray-500 hover:text-blue-600 border border-gray-200 rounded hover:bg-gray-50 transition-colors"
-                                title={`Rotate Orientation (Current: ${activeMaterial.orientationPreference || 'default'})`}
-                            >
-                                <div className={`transform transition-transform ${activeMaterial.orientationPreference === 'rotated' ? 'rotate-90' : ''}`}>
-                                    <BoxIcon className="w-4 h-4" />
-                                </div>
-                            </button>
-                        </div>
-                    </div>
-                    <div className="bg-white p-2 rounded border border-gray-200">
-                        <div className="flex justify-between gap-2">
-                            <label className={`flex-1 flex flex-col items-center justify-center gap-2 p-2 rounded cursor-pointer border transition-colors ${activeMaterial.box.allowedRotations.x ? 'bg-blue-50 border-blue-200' : 'hover:bg-gray-50 border-transparent'}`}>
-                                <input
-                                    type="checkbox"
-                                    checked={activeMaterial.box.allowedRotations.x}
-                                    onChange={(e) => updateBox(activeMaterial.id, { allowedRotations: { ...activeMaterial.box.allowedRotations, x: e.target.checked } })}
-                                    className="hidden"
-                                />
-                                <div className="w-8 h-8 flex items-end justify-center">
-                                    <div className="w-4 h-8 bg-blue-500 rounded-sm border border-blue-600 shadow-sm"></div>
-                                </div>
-                                <span className={`text-xs font-medium ${activeMaterial.box.allowedRotations.x ? 'text-blue-700' : 'text-gray-500'}`}>Vertical</span>
-                            </label>
-
-                            <label className={`flex-1 flex flex-col items-center justify-center gap-2 p-2 rounded cursor-pointer border transition-colors ${activeMaterial.box.allowedRotations.y ? 'bg-blue-50 border-blue-200' : 'hover:bg-gray-50 border-transparent'}`}>
-                                <input
-                                    type="checkbox"
-                                    checked={activeMaterial.box.allowedRotations.y}
-                                    onChange={(e) => updateBox(activeMaterial.id, { allowedRotations: { ...activeMaterial.box.allowedRotations, y: e.target.checked } })}
-                                    className="hidden"
-                                />
-                                <div className="w-8 h-8 flex items-end justify-center">
-                                    <div className="w-8 h-4 bg-blue-500 rounded-sm border border-blue-600 shadow-sm"></div>
-                                </div>
-                                <span className={`text-xs font-medium ${activeMaterial.box.allowedRotations.y ? 'text-blue-700' : 'text-gray-500'}`}>Horizontal</span>
-                            </label>
-
-                            <label className={`flex-1 flex flex-col items-center justify-center gap-2 p-2 rounded cursor-pointer border transition-colors ${activeMaterial.box.allowedRotations.z ? 'bg-blue-50 border-blue-200' : 'hover:bg-gray-50 border-transparent'}`}>
-                                <input
-                                    type="checkbox"
-                                    checked={activeMaterial.box.allowedRotations.z}
-                                    onChange={(e) => updateBox(activeMaterial.id, { allowedRotations: { ...activeMaterial.box.allowedRotations, z: e.target.checked } })}
-                                    className="hidden"
-                                />
-                                <div className="w-8 h-8 flex items-end justify-center perspective-[100px]">
-                                    <div className="w-8 h-6 bg-blue-500 rounded-sm border border-blue-600 shadow-sm transform rotate-x-60"></div>
-                                </div>
-                                <span className={`text-xs font-medium ${activeMaterial.box.allowedRotations.z ? 'text-blue-700' : 'text-gray-500'}`}>Flat</span>
-                            </label>
-                        </div>
-                    </div>
-                </section>
-
-                {/* Layer Configuration */}
-                <section className="space-y-3">
-                    <h3 className="font-semibold text-gray-700 flex items-center gap-2 text-sm">
-                        <Layers className="w-4 h-4" /> Layer Configuration
-                    </h3>
-                    <div className="space-y-2">
-                        <input
-                            type="text"
-                            value={activeMaterial.layerConfig}
-                            onChange={(e) => updateMaterial(activeMaterial.id, { layerConfig: e.target.value })}
-                            placeholder="No constraint (full fill)"
-                            className="w-full p-3 border rounded text-base h-12"
-                            title="Enter 'AxB' to apply strict layer constraints"
-                        />
-                        <div className="flex justify-between items-center">
-                            <div className="text-xs text-gray-400">
-                                Format: [items]x[layers] (e.g., "6x3")
-                            </div>
-                            <button
-                                onClick={() => handleOptimize(activeMaterial.id)}
-                                disabled={isOptimizing}
-                                className="text-xs text-gray-400 hover:text-purple-600 flex items-center gap-1 transition-colors"
-                            >
-                                {isOptimizing && optimizingMaterialId === activeMaterial.id ? (
-                                    <span className="animate-spin">⌛</span>
-                                ) : (
-                                    <Wand2 className="w-3 h-3" />
-                                )}
-                                Optimize
-                            </button>
-                        </div>
-                    </div>
-                </section>
-
-
-
-                {/* Pallet Settings */}
-                <section className="space-y-3">
-                    <div className="flex items-center justify-between">
-                        <h3 className="font-semibold text-gray-700 flex items-center gap-2 text-sm">
-                            <Settings className="w-4 h-4" /> Pallet
-                        </h3>
-                        <input
-                            type="checkbox"
-                            checked={activeMaterial.pallet.usePallet}
-                            onChange={(e) => updatePallet(activeMaterial.id, { usePallet: e.target.checked })}
-                            className="w-4 h-4"
-                        />
-                    </div>
-
-                    <button
-                        onClick={() => calculatePerfectPallet(activeMaterial)}
-                        disabled={!isConfigValid(activeMaterial.layerConfig)}
-                        className={`w-full py-2 px-3 rounded flex items-center justify-center gap-2 text-sm font-medium transition-colors ${isConfigValid(activeMaterial.layerConfig)
-                            ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                            }`}
-                    >
-                        <Calculator className="w-4 h-4" />
-                        Create Pallet from Config
-                    </button>
-
-                    {activeMaterial.pallet.usePallet && (
-                        <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
-                            <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                    <label className="text-xs text-gray-500">Length</label>
-                                    <input
-                                        type="number"
-                                        value={activeMaterial.pallet.dimensions.length}
-                                        onChange={(e) => updatePalletDims(activeMaterial.id, 'length', Number(e.target.value))}
-                                        className="w-full p-3 border rounded text-base h-12"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-xs text-gray-500">Width</label>
-                                    <input
-                                        type="number"
-                                        value={activeMaterial.pallet.dimensions.width}
-                                        onChange={(e) => updatePalletDims(activeMaterial.id, 'width', Number(e.target.value))}
-                                        className="w-full p-3 border rounded text-base h-12"
-                                    />
-                                </div>
-                            </div>
-                            <div className="flex gap-2">
-                                <div className="flex-1">
-                                    <label className="text-xs text-gray-500">Max Load Height</label>
-                                    <input
-                                        type="number"
-                                        value={activeMaterial.pallet.maxLoadHeight}
-                                        onChange={(e) => updatePallet(activeMaterial.id, { maxLoadHeight: Number(e.target.value) })}
-                                        className="w-full p-3 border rounded text-base h-12"
-                                    />
-                                </div>
-                                <div className="w-20">
-                                    <label className="text-xs text-gray-500">Wgt(kg)</label>
-                                    <input
-                                        type="number"
-                                        value={activeMaterial.pallet.weightKg || ''}
-                                        onChange={(e) => updatePallet(activeMaterial.id, { weightKg: e.target.value ? Number(e.target.value) : undefined })}
-                                        className="w-full p-3 border rounded text-base h-12"
-                                        placeholder="Opt"
-                                    />
-                                </div>
-                            </div>
-                            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer p-2 bg-white rounded border border-gray-200">
-                                <input
-                                    type="checkbox"
-                                    checked={activeMaterial.pallet.stackPallets || false}
-                                    onChange={(e) => updatePallet(activeMaterial.id, { stackPallets: e.target.checked })}
-                                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                                />
-                                <div className="flex items-center gap-1">
-                                    <Layers className="w-4 h-4 text-gray-500" />
-                                    <span>Stack Pallets (max 2)</span>
-                                </div>
-                            </label>
-                        </div>
-                    )}
-                </section>
-
-                {/* Quantity */}
-                <section className="space-y-3 pb-20">
-                    <h3 className="font-semibold text-gray-700 text-sm">Quantity</h3>
-                    <input
-                        type="number"
-                        value={activeMaterial.quantity}
-                        onChange={(e) => updateMaterial(activeMaterial.id, { quantity: Number(e.target.value) })}
-                        className="w-full p-3 border rounded text-base h-12"
-                    />
-                </section>
-            </div>
-
-            {/* Recalculate Button (Floating) */}
-            <div className="absolute bottom-4 left-4 right-4 md:w-72">
-                <button
-                    onClick={handleRecalculate}
-                    className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold shadow-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-                >
-                    <Calculator className="w-5 h-5" />
-                    Recalculate
-                </button>
-            </div>
-
-            {/* Modals */}
-            {showEditModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg shadow-xl w-96 overflow-hidden">
-                        <div className="flex items-center justify-between p-4 border-b">
-                            <h3 className="font-bold text-lg text-gray-800">Edit Containers</h3>
-                            <button onClick={() => setShowEditModal(false)} className="p-1 hover:bg-gray-100 rounded">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-                        <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
-                            {editableContainers.map((c, idx) => (
-                                <div key={c.name} className="border p-3 rounded bg-gray-50">
-                                    <div className="font-semibold text-sm mb-2">{c.name}</div>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        <div>
-                                            <label className="text-xs text-gray-500">Length</label>
-                                            <input
-                                                type="number"
-                                                value={c.dimensions.length}
-                                                onChange={(e) => handleContainerDimensionChange(idx, 'length', Number(e.target.value))}
-                                                className="w-full p-1 border rounded text-sm"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="text-xs text-gray-500">Width</label>
-                                            <input
-                                                type="number"
-                                                value={c.dimensions.width}
-                                                onChange={(e) => handleContainerDimensionChange(idx, 'width', Number(e.target.value))}
-                                                className="w-full p-1 border rounded text-sm"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="text-xs text-gray-500">Height</label>
-                                            <input
-                                                type="number"
-                                                value={c.dimensions.height}
-                                                onChange={(e) => handleContainerDimensionChange(idx, 'height', Number(e.target.value))}
-                                                className="w-full p-1 border rounded text-sm"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="p-4 border-t bg-gray-50 flex justify-end gap-2">
-                            <button onClick={() => setShowEditModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancel</button>
-                            <button onClick={handleSaveContainers} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Save</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {showOptimizationModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg shadow-xl w-96 overflow-hidden">
-                        <div className="flex items-center justify-between p-4 border-b bg-purple-50">
-                            <h3 className="font-bold text-lg text-purple-800 flex items-center gap-2">
-                                <Wand2 className="w-5 h-5" /> Optimization Suggestions
-                            </h3>
-                            <button onClick={() => setShowOptimizationModal(false)} className="p-1 hover:bg-purple-100 rounded text-purple-700">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-                        <div className="p-4 space-y-2">
-                            <p className="text-sm text-gray-600 mb-2">
-                                Best configurations found for Material {optimizingMaterialId}:
-                            </p>
-                            {optimizationSuggestions.length === 0 ? (
-                                <div className="text-center text-gray-500 py-4">No better configurations found.</div>
-                            ) : (
-                                optimizationSuggestions.map((sugg, idx) => (
-                                    <button
-                                        key={idx}
-                                        onClick={() => applyOptimization(sugg.config)}
-                                        className="w-full text-left p-3 border rounded hover:bg-purple-50 hover:border-purple-300 transition-colors group"
-                                    >
-                                        <div className="flex justify-between items-center mb-1">
-                                            <span className="font-bold text-gray-800">{sugg.config}</span>
-                                            <span className="text-xs font-semibold bg-green-100 text-green-700 px-2 py-0.5 rounded">
-                                                {sugg.containers} Container{sugg.containers > 1 ? 's' : ''}
-                                            </span>
-                                        </div>
-                                        <div className="text-xs text-gray-500 flex justify-between">
-                                            <span>{sugg.itemsPerLayer} items/layer × {sugg.layers} layers</span>
-                                            <span className="group-hover:text-purple-600">Apply →</span>
-                                        </div>
-                                    </button>
-                                ))
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

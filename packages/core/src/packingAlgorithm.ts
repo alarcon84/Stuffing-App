@@ -1,11 +1,12 @@
 import type { Container, PackingResult } from './types';
 import { deepClone, calculateStats } from './utils';
 import { runPostProcessingPipeline } from './postProcessingPipeline';
+import { injectContinuationVCs } from './virtualContainer';
 import { debugLogger } from './debugLogger';
 import { packSequential } from './sequentialPass';
 import { packSmartStack } from './smartStackMode';
 
-console.log("Stuffing Calculator v0.1.6-sequential-fix");
+console.log("Stuffing Calculator v0.1.8");
 
 // Helper to map packGridCore position (Width, Length, Height) to PlacedItem (Length, Height, Width)
 // Kept for consistency if needed by local helpers, though most logic is now delegated.
@@ -93,6 +94,10 @@ export const calculatePacking = (
         // So we must call it for each material.
 
         let currentLoads = result.loads;
+        let collectedVCs: import('./virtualContainer').VirtualContainer[] = result.virtualContainers ? [...result.virtualContainers] : [];
+
+        // 1.1 Establish exactly ONE authoritative space structure
+        const globalVCQueue: import('./virtualContainer').VirtualContainer[] = [];
 
         for (let mIdx = 0; mIdx < activeMaterials.length; mIdx++) {
             const mat = activeMaterials[mIdx];
@@ -112,10 +117,23 @@ export const calculatePacking = (
                 enableFullMix,
                 packingMode,
                 fullMixRotations,
-                mIdx  // materialIndex — controls sequential guard + conservative mode
+                mIdx,  // materialIndex — controls sequential guard + conservative mode
+                activeMaterials,
+                globalVCQueue
             );
 
             currentLoads = pipelineResult.loads;
+            if (pipelineResult.virtualContainers) {
+                collectedVCs.push(...pipelineResult.virtualContainers);
+            }
+
+            // Inject continuation VC between material passes (FullMix only).
+            // Gives Mx+1 a clean full-height/width starting plane at Mx's leading
+            // edge, restoring the same structured geometry that M1 sees by default.
+            // Residual guillotine sub-VCs are left intact as secondary fill targets.
+            if (enableFullMix && mIdx < activeMaterials.length - 1) {
+                injectContinuationVCs(currentLoads, container.dimensions, margins, globalVCQueue);
+            }
         }
 
         // --- ORDER VALIDATION (Sequential mode) ---
@@ -146,6 +164,7 @@ export const calculatePacking = (
 
         // Update result with pipeline modifications
         result.loads = currentLoads;
+        result.virtualContainers = collectedVCs;
     }
 
     // 4. Final Statistics Calculation

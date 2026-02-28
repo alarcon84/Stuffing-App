@@ -34,7 +34,6 @@ export function runTopUpPass(
     margins: { length?: number; width?: number; height?: number },
     remainingQuantity: number,
     totalPackedSoFar: number,
-    packingMode: import('../types').PackingMode,
     yRangeFilter?: { min: number; max: number }  // NEW: Y-region isolation for Sequential mode
 ): PassResult {
     if (remainingQuantity <= 0) {
@@ -113,6 +112,7 @@ export function runTopUpPass(
 
     // Process each region
     const allPlacements: PlacedItem[] = [];
+    const usedVirtualContainers: VirtualContainer[] = [];
     let currentRemaining = remainingQuantity;
     let currentTotalPacked = totalPackedSoFar;
 
@@ -176,7 +176,8 @@ export function runTopUpPass(
             length: regionLength,
             width: regionWidth,
             height: topFreeHeight,
-            realContainerId: load.id
+            realContainerId: load.id,
+            id: `vc_topup_${Math.round(regionStart)}_${Math.round(region.height)}`
         };
 
         const result = packIntoVirtualContainerFlat(
@@ -205,7 +206,8 @@ export function runTopUpPass(
                     ...mapped,
                     locked: true,
                     source: 'TOP_UP' as const,
-                    isFlatTopOff: true
+                    isFlatTopOff: true,
+                    vcId: virtualContainer.id
                 };
 
                 // Check support
@@ -223,12 +225,14 @@ export function runTopUpPass(
             currentTotalPacked += placedCount;
 
             console.log(`[TOP_UP] Region Y=${region.height.toFixed(0)}, L=${regionLength.toFixed(0)}: Placed ${placedCount} (Valid/Supported)`);
+            usedVirtualContainers.push(virtualContainer);
         }
     }
 
     return {
         placements: allPlacements,
-        remainingQuantity: currentRemaining
+        remainingQuantity: currentRemaining,
+        virtualContainers: usedVirtualContainers
     };
 }
 

@@ -33,6 +33,7 @@ export interface PipelineResult {
     loads: ContainerLoad[];
     totalItemsAdded: number;
     addedVolume: number;
+    virtualContainers?: import('./virtualContainer').VirtualContainer[];
 }
 
 /** Y-region filter: only VCs whose origin.y is within [min, max) are eligible */
@@ -80,14 +81,17 @@ export function runPostProcessingPipeline(
     enableFullMix: boolean,
     packingMode: import('./types').PackingMode,
     fullMixRotations?: import('./types').FullMixRotations,
-    materialIndex: number = 0
+    materialIndex: number = 0,
+    allMaterials?: Material[],
+    globalVCQueue: import('./virtualContainer').VirtualContainer[] = []
 ): PipelineResult {
     console.log(`\n[PIPELINE START] Material ${material.id} (idx=${materialIndex}), Loads=${initialLoads.length}, TopUp=${enableTopUp}, FullMix=${enableFullMix}`);
 
     const result: PipelineResult = {
         loads: [],
         totalItemsAdded: 0,
-        addedVolume: 0
+        addedVolume: 0,
+        virtualContainers: []
     };
 
     // If no passes enabled, return original loads
@@ -159,7 +163,6 @@ export function runPostProcessingPipeline(
                         margins,
                         remainingForTopUp,
                         packedBeforeTopUp,
-                        packingMode,
                         yFilter
                     );
 
@@ -179,6 +182,10 @@ export function runPostProcessingPipeline(
                         itemsAddedInThisLoad += placedCount;
                         volumeAddedInThisLoad += placedVolume;
                         currentLoadPackedCount += placedCount; // Important for next pass
+
+                        if (topUpResult.virtualContainers) {
+                            result.virtualContainers!.push(...topUpResult.virtualContainers);
+                        }
                     }
                 }
             }
@@ -202,8 +209,14 @@ export function runPostProcessingPipeline(
                     topSpaceOccupied,
                     fullMixRotations,
                     materialIndex,
-                    yFilter
+                    yFilter,
+                    packingMode,
+                    allMaterials,
+                    globalVCQueue,
+                    initialLoads.map((l, lIdx) => lIdx === i ? updatedLoad : l)
                 );
+
+                console.log("Material:", material.id, "Visible VC count:", globalVCQueue.length);
 
                 if (fullMixResult.placements.length > 0) {
                     const placedCount = fullMixResult.placedCount;
@@ -220,6 +233,10 @@ export function runPostProcessingPipeline(
                     itemsAddedInThisLoad += placedCount;
                     volumeAddedInThisLoad += placedVolume;
                     currentLoadPackedCount += placedCount;
+
+                    if (fullMixResult.virtualContainers) {
+                        result.virtualContainers!.push(...fullMixResult.virtualContainers);
+                    }
                 }
             }
         }

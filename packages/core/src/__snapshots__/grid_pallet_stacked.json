@@ -26,7 +26,8 @@
             "cols": 3,
             "rows": 3,
             "layers": 5
-          }
+          },
+          "isPalletBase": true
         },
         {
           "position": [
@@ -51,7 +52,8 @@
             "cols": 3,
             "rows": 3,
             "layers": 5
-          }
+          },
+          "isPalletBase": true
         },
         {
           "position": [
@@ -76,12 +78,13 @@
             "cols": 3,
             "rows": 3,
             "layers": 5
-          }
+          },
+          "isPalletBase": true
         }
       ],
       "itemCount": 100,
       "utilization": 12.471409997486544,
-      "type": "partial"
+      "type": "full"
     }
   ],
   "totalItems": 100,
@@ -92,13 +95,8 @@
     "width": 2352,
     "height": 2393
   },
-  "errors": [],
-  "actualUsedVolume": 2400000000,
-  "packedBoxDimensions": {
-    "length": 400,
-    "width": 300,
-    "height": 200
-  },
+  "actualUsedVolume": 4140000000,
+  "optimizationsAvailable": [],
   "totalPallets": 3,
   "totalLots": 0
 }

@@ -26,12 +26,13 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         }
       ],
       "itemCount": 1,
       "utilization": 3.0124178737890204,
-      "type": "partial"
+      "type": "full"
     }
   ],
   "totalItems": 1,
@@ -42,13 +43,8 @@
     "width": 2352,
     "height": 2393
   },
-  "errors": [],
   "actualUsedVolume": 1000000000,
-  "packedBoxDimensions": {
-    "length": 1000,
-    "width": 1000,
-    "height": 1000
-  },
+  "optimizationsAvailable": [],
   "totalPallets": 0,
   "totalLots": 0
 }

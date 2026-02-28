@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
 
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Grid, Center, Text } from '@react-three/drei';
-import { Maximize, X, Palette } from 'lucide-react';
+import { OrbitControls, Grid, Center, Text, ContactShadows } from '@react-three/drei';
+import { Maximize, X, Palette, Box as BoxIcon } from 'lucide-react';
 import type { PackingResult, Container, Box, Pallet, PlacedItem, Material } from '@stuffing-calc/core';
 import { PASTEL_PALETTE } from './InputPanel';
 import * as THREE from 'three';
@@ -25,6 +25,9 @@ interface VisualizerProps {
     isFullscreen?: boolean;
     activeMaterialId?: number;
     onUpdateMaterialColor?: (id: number, color: string) => void;
+    highlightedVcId?: string | null;
+    topHeaderContent?: React.ReactNode;
+    extraToolbarButtons?: React.ReactNode;
 }
 
 const ContainerView: React.FC<{ container: Container; position: [number, number, number] }> = ({ container, position }) => {
@@ -33,20 +36,46 @@ const ContainerView: React.FC<{ container: Container; position: [number, number,
     const l = length * scale;
     const w = width * scale;
     const h = height * scale;
-
     return (
         <group position={position}>
             {/* Floor - slightly lowered to avoid z-fighting with boxes */}
             <mesh position={[0, -0.005, 0]} rotation={[-Math.PI / 2, 0, 0]}>
                 <planeGeometry args={[l, w]} />
-                <meshStandardMaterial color="#e5e7eb" side={THREE.DoubleSide} />
+                <meshStandardMaterial color="#333" side={THREE.DoubleSide} />
             </mesh>
-
-            {/* Wireframe Box */}
+            {/* Container Edges */}
             <lineSegments position={[0, h / 2, 0]}>
                 <edgesGeometry args={[new THREE.BoxGeometry(l, h, w)]} />
-                <lineBasicMaterial color="#9ca3af" />
+                <lineBasicMaterial color="#666" transparent opacity={0.3} />
             </lineSegments>
+        </group>
+    );
+};
+
+const VCHighlighter: React.FC<{ vcs: import('@stuffing-calc/core').VirtualContainer[]; containerDims: any; offset: [number, number, number]; highlightedVcId?: string | null }> = ({ vcs, containerDims, offset, highlightedVcId }) => {
+    const scale = 0.001;
+
+    return (
+        <group>
+            {vcs.map((vc) => {
+                if (!highlightedVcId || vc.id !== highlightedVcId) return null;
+
+                const l = vc.length * scale;
+                const w = vc.width * scale;
+                const h = vc.height * scale;
+
+                // vc.origin is the min corner. We need the center for BoxGeometry
+                const cx = (vc.origin.x + vc.length / 2 - containerDims.length / 2) * scale + offset[0];
+                const cy = (vc.origin.y + vc.height / 2) * scale + offset[1];
+                const cz = (vc.origin.z + vc.width / 2 - containerDims.width / 2) * scale + offset[2];
+
+                return (
+                    <lineSegments key={vc.id} position={[cx, cy, cz]}>
+                        <edgesGeometry args={[new THREE.BoxGeometry(l, h, w)]} />
+                        <lineBasicMaterial color="#00ff00" transparent opacity={0.5} />
+                    </lineSegments>
+                );
+            })}
         </group>
     );
 };
@@ -341,7 +370,7 @@ const Boxes: React.FC<{ items: PlacedItem[]; containerDims: any; offset: [number
             />
             {edgeGeometry && (
                 <lineSegments geometry={edgeGeometry}>
-                    <lineBasicMaterial color="#000000" linewidth={1} />
+                    <lineBasicMaterial color="#000000" linewidth={1} transparent opacity={0.3} />
                 </lineSegments>
             )}
         </group>
@@ -349,7 +378,7 @@ const Boxes: React.FC<{ items: PlacedItem[]; containerDims: any; offset: [number
 };
 
 // Optimization: Use React.memo for the entire component
-export const Visualizer = React.memo<VisualizerProps>(({ result, container, box, pallet, layerConfig, box2, pallet2, layerConfig2, materials, onToggleFullscreen, isFullscreen, activeMaterialId, onUpdateMaterialColor }) => {
+export const Visualizer = React.memo<VisualizerProps>(({ result, container, box, pallet, layerConfig, box2, pallet2, layerConfig2, materials, onToggleFullscreen, isFullscreen, activeMaterialId, onUpdateMaterialColor, highlightedVcId, topHeaderContent, extraToolbarButtons }) => {
     const [isMobile, setIsMobile] = React.useState(window.innerWidth < 768);
     const [viewMode, setViewMode] = React.useState<'linear' | 'parallel' | 'grid'>('linear');
     const [showColorPicker, setShowColorPicker] = React.useState(false);
@@ -380,8 +409,8 @@ export const Visualizer = React.memo<VisualizerProps>(({ result, container, box,
     // GUARD 1: No result at all
     if (!result) {
         return (
-            <div className="h-full w-full bg-gray-900 relative flex items-center justify-center">
-                <div className="text-gray-500 text-lg font-medium">Click "Calculate" to see packing visualization</div>
+            <div className="h-full w-full bg-[radial-gradient(ellipse_at_center,_#2A2D34_0%,_#121212_100%)] relative flex items-center justify-center">
+                <div className="text-gray-400 text-lg font-medium">Click "Calculate" to see packing visualization</div>
 
                 {/* Keep fullscreen button if needed */}
                 {onToggleFullscreen && (
@@ -399,8 +428,8 @@ export const Visualizer = React.memo<VisualizerProps>(({ result, container, box,
     // GUARD 2: Result exists but no loads
     if (!result.loads || result.loads.length === 0 || stableLoads.length === 0) {
         return (
-            <div className="h-full w-full bg-gray-900 relative flex items-center justify-center">
-                <div className="text-gray-500 text-lg font-medium">No containers to display</div>
+            <div className="h-full w-full bg-[radial-gradient(ellipse_at_center,_#2A2D34_0%,_#121212_100%)] relative flex items-center justify-center">
+                <div className="text-gray-400 text-lg font-medium">No containers to display</div>
             </div>
         );
     }
@@ -410,68 +439,77 @@ export const Visualizer = React.memo<VisualizerProps>(({ result, container, box,
     const spacing = containerLengthM + 2; // 2 meters gap
 
     return (
-        <div className="h-full w-full bg-gray-900 relative">
+        <div className="h-full w-full bg-[radial-gradient(ellipse_at_center,_#2A2D34_0%,_#121212_100%)] relative">
             {onToggleFullscreen && (
                 <button
                     onClick={onToggleFullscreen}
-                    className="absolute top-4 right-4 bg-white/10 backdrop-blur p-2 rounded-lg text-white hover:bg-white/20 transition-colors z-10"
+                    className="absolute top-4 right-4 bg-white/10 backdrop-blur p-2 rounded-lg text-white hover:bg-white/20 transition-colors z-30"
                     title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
                 >
                     {isFullscreen ? <X className="w-6 h-6" /> : <Maximize className="w-6 h-6" />}
                 </button>
             )}
 
-            {/* View Toggle Button */}
-            <button
-                onClick={toggleViewMode}
-                className="absolute bottom-4 left-4 bg-white/10 backdrop-blur px-3 py-2 rounded-lg text-white text-sm font-medium hover:bg-white/20 transition-colors z-10 border border-white/20"
-                title="Change Container View"
-            >
-                Cntr View: {viewMode.charAt(0).toUpperCase() + viewMode.slice(1)}
-            </button>
-
-            {/* Color Picker Button (Above View Toggle) */}
-            {onUpdateMaterialColor && activeMaterialId && (
-                <div className="absolute bottom-16 left-4 z-20">
-                    <button
-                        onClick={() => setShowColorPicker(!showColorPicker)}
-                        className="bg-white/10 backdrop-blur p-2 rounded-lg text-white hover:bg-white/20 transition-colors border border-white/20 shadow-lg"
-                        title="Change Material Color"
-                    >
-                        <Palette className="w-5 h-5" />
-                    </button>
-                    {showColorPicker && (
-                        <div className="absolute bottom-full left-0 mb-2 p-3 bg-white rounded-lg shadow-xl border border-gray-200 w-64 animate-in fade-in zoom-in duration-200">
-                            <div className="text-xs font-semibold text-gray-500 mb-2">Select Color</div>
-                            <div className="grid grid-cols-6 gap-2">
-                                {PASTEL_PALETTE.map((color) => (
-                                    <button
-                                        key={color}
-                                        className="w-8 h-8 rounded-full border border-gray-100 hover:scale-110 transition-transform shadow-sm"
-                                        style={{ backgroundColor: color }}
-                                        onClick={() => {
-                                            onUpdateMaterialColor(activeMaterialId, color);
-                                            setShowColorPicker(false);
-                                        }}
-                                        title={color}
-                                    />
-                                ))}
-                            </div>
-                            {/* Monotone Toggle */}
-                            <button
-                                onClick={() => setMonotoneMode(!monotoneMode)}
-                                className={`w-full mt-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all border ${monotoneMode
-                                        ? 'bg-indigo-500 text-white border-indigo-600 shadow-md'
-                                        : 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200'
-                                    }`}
-                                title="When enabled, Top-Up and Full-Mix boxes use the same color as the base material"
-                            >
-                                {monotoneMode ? '● Monotone ON' : '○ Monotone OFF'}
-                            </button>
-                        </div>
-                    )}
+            {/* Unified Top Header Bar */}
+            {topHeaderContent && (
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center justify-center z-20 w-max max-w-[90vw] overflow-x-auto no-scrollbar pointer-events-auto">
+                    <div className="flex items-center gap-4 bg-[#1E1E1E]/80 backdrop-blur-md px-4 md:px-6 py-2 rounded-full border border-[#333] shadow-lg text-sm text-[#E0E0E0] whitespace-nowrap">
+                        {topHeaderContent}
+                    </div>
                 </div>
             )}
+
+            {/* Unified Bottom Toolbar */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center justify-center z-20 w-max max-w-[90vw] overflow-x-auto no-scrollbar pointer-events-auto">
+                <div className="flex items-center gap-2 md:gap-3 bg-[#1E1E1E]/80 backdrop-blur-md px-4 md:px-6 py-2 rounded-full border border-[#333] shadow-lg text-[#E0E0E0] whitespace-nowrap">
+                    <button onClick={toggleViewMode} className="hover:text-white flex items-center gap-1 md:gap-2 text-xs md:text-sm font-medium transition-colors">
+                        <BoxIcon className="w-4 h-4" /> View: {viewMode.charAt(0).toUpperCase() + viewMode.slice(1)}
+                    </button>
+                    {onUpdateMaterialColor && activeMaterialId && (
+                        <>
+                            <div className="w-px h-4 bg-[#444] shrink-0" />
+                            <div className="relative">
+                                <button onClick={() => setShowColorPicker(!showColorPicker)} className="hover:text-white flex items-center gap-1 md:gap-2 text-xs md:text-sm font-medium transition-colors">
+                                    <Palette className="w-4 h-4" /> Colors
+                                </button>
+                                {showColorPicker && (
+                                    <div className="absolute bottom-[calc(100%+12px)] left-1/2 -translate-x-1/2 p-3 bg-[#2A2D34] rounded-xl shadow-2xl border border-[#444] w-[260px] animate-in fade-in zoom-in duration-200 pointer-events-auto">
+                                        <div className="text-xs font-semibold text-[#888] mb-2 uppercase tracking-wider">Select Color</div>
+                                        <div className="grid grid-cols-6 gap-2">
+                                            {PASTEL_PALETTE.map((color) => (
+                                                <button
+                                                    key={color}
+                                                    className="w-8 h-8 rounded-full border border-[#555] hover:scale-110 transition-transform shadow-sm"
+                                                    style={{ backgroundColor: color }}
+                                                    onClick={() => {
+                                                        onUpdateMaterialColor(activeMaterialId, color);
+                                                        setShowColorPicker(false);
+                                                    }}
+                                                />
+                                            ))}
+                                        </div>
+                                        <button
+                                            onClick={() => setMonotoneMode(!monotoneMode)}
+                                            className={`w-full mt-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all border ${monotoneMode
+                                                ? 'bg-blue-600 text-white border-blue-500 shadow-md'
+                                                : 'bg-[#1E1E1E] text-[#CCC] border-[#444] hover:bg-[#333]'
+                                                }`}
+                                        >
+                                            {monotoneMode ? '● Monotone ON' : '○ Monotone OFF'}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    )}
+                    {extraToolbarButtons && (
+                        <>
+                            <div className="w-px h-4 bg-[#444] shrink-0" />
+                            {extraToolbarButtons}
+                        </>
+                    )}
+                </div>
+            </div>
 
             <Canvas
                 key="main-canvas" // Stable key to prevent recreation
@@ -483,9 +521,11 @@ export const Visualizer = React.memo<VisualizerProps>(({ result, container, box,
                     antialias: true
                 }}
             >
-                <ambientLight intensity={0.6} />
-                <directionalLight position={[10, 20, 10]} intensity={1.2} castShadow />
+                <ambientLight intensity={0.4} />
+                <directionalLight position={[10, 20, 10]} intensity={1.5} />
                 <OrbitControls makeDefault />
+
+                <ContactShadows resolution={1024} scale={30} blur={2.5} opacity={0.6} far={15} color="#000000" position={[0, -0.01, 0]} />
 
                 <Center>
                     {stableLoads.map((load, index) => {
@@ -518,6 +558,15 @@ export const Visualizer = React.memo<VisualizerProps>(({ result, container, box,
                                     container={container}
                                     position={[xOffset, 0, zOffset]}
                                 />
+
+                                {result.virtualContainers && (
+                                    <VCHighlighter
+                                        vcs={result.virtualContainers.filter(vc => vc.realContainerId === load.id)}
+                                        containerDims={container.dimensions}
+                                        offset={[xOffset, 0, zOffset]}
+                                        highlightedVcId={highlightedVcId}
+                                    />
+                                )}
 
                                 {Array.from(itemsByMaterial.entries()).map(([mid, items]) => {
                                     // Find material data
@@ -632,8 +681,8 @@ export const Visualizer = React.memo<VisualizerProps>(({ result, container, box,
                 <Grid
                     infiniteGrid
                     fadeDistance={50}
-                    sectionColor="#4b5563"
-                    cellColor="#374151"
+                    sectionColor="#333333"
+                    cellColor="#222222"
                     position={[0, 0.001, 0]}
                     cellSize={isMobile ? 1 : 0.5}
                     sectionSize={isMobile ? 5 : 1}

@@ -1,7 +1,7 @@
 {
     "name": "stuffing-calculator-monorepo",
     "private": true,
-    "version": "0.1.3",
+    "version": "0.1.8",
     "packageManager": "npm@11.6.2",
     "scripts": {
         "build": "turbo run build",

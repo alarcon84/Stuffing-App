@@ -34,7 +34,9 @@ export interface FullMixRotations {
 export interface Container {
   name: string;
   dimensions: Dimensions;
-  type: '20' | '40' | '40HC' | '53' | 'custom';
+  type: '20' | '40' | '40HC' | '53' | 'eu-trailer' | 'eu-mega' | '11tonwt' | 'custom';
+  /** Sea container door aperture height (mm). When present the UI shows a Door/Inner toggle. */
+  doorHeight?: number;
 }
 
 export interface Pallet {
@@ -60,7 +62,8 @@ export interface PlacedItem {
     layers: number; // Number of items along height (Y)
   };
   locked?: boolean; // If true, this item cannot be moved by subsequent passes
-  source?: 'DEFAULT' | 'TOP_UP' | 'FULL_MIX'; // Traceability for debugging
+  source?: 'DEFAULT' | 'TOP_UP' | 'FULL_MIX' | 'SMART_STACK'; // Traceability for debugging
+  vcId?: string; // Virtual Container ID for Results grouping
   isPalletBase?: boolean; // If true, this item represents the base of a pallet
 }
 
@@ -84,6 +87,7 @@ export interface PackingResult {
   errors?: string[]; // Any validation errors or warnings
   actualUsedVolume?: number; // Actual volume of placed items (not including wasted space)
   optimizationsAvailable?: import('./types').OptimizationResult[]; // List of potential optimizations found
+  virtualContainers?: import('./virtualContainer').VirtualContainer[]; // Used for UI highlighting
 }
 
 export interface Material {

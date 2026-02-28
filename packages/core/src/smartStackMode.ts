@@ -66,6 +66,7 @@ export function packSmartStack(
     const allErrors: string[] = baseResult.errors ? [...baseResult.errors] : [];
     const optimizations: import('./types').OptimizationResult[] = baseResult.optimizationsAvailable ? [...baseResult.optimizationsAvailable] : [];
     let totalVolume = baseResult.actualUsedVolume || 0;
+    const usedVirtualContainers: import('./virtualContainer').VirtualContainer[] = [];
 
     // Step 2: Process subsequent materials
     for (let matIdx = 1; matIdx < mats.length; matIdx++) {
@@ -170,7 +171,9 @@ export function packSmartStack(
                                 dimensions: bestFit.dims,
                                 type: 'box',
                                 itemCount: 1,
-                                materialId: mat.id
+                                materialId: mat.id,
+                                vcId: vc.id,
+                                source: 'SMART_STACK'
                             });
                         }
 
@@ -183,6 +186,9 @@ export function packSmartStack(
                         const contVol = cont.dimensions.length * cont.dimensions.width * cont.dimensions.height;
                         allLoads[loadIdx].utilization = (loadVol / contVol) * 100;
                         allLoads[loadIdx].itemCount += toPlace;
+
+                        // Save the VC we used
+                        usedVirtualContainers.push(vc);
                     }
                 }
             }
@@ -253,6 +259,7 @@ export function packSmartStack(
         containerDimensions: cont.dimensions,
         actualUsedVolume: totalVolume,
         errors: allErrors,
-        optimizationsAvailable: optimizations
+        optimizationsAvailable: optimizations,
+        virtualContainers: usedVirtualContainers
     };
 }

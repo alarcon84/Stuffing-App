@@ -26,7 +26,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -51,7 +52,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -76,7 +78,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -101,7 +104,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -126,7 +130,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -151,7 +156,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -176,7 +182,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -201,7 +208,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -226,7 +234,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -251,7 +260,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -276,7 +286,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -301,7 +312,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -326,7 +338,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -351,7 +364,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -376,7 +390,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -401,7 +416,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -426,7 +442,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -451,7 +468,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -476,7 +494,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -501,7 +520,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -526,7 +546,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -551,7 +572,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -576,7 +598,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -601,7 +624,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -626,7 +650,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -651,7 +676,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -676,7 +702,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -701,7 +728,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -726,7 +754,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -751,7 +780,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -776,7 +806,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -801,7 +832,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -826,7 +858,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -851,7 +884,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -876,7 +910,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -901,7 +936,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -926,7 +962,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -951,7 +988,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -976,7 +1014,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1001,7 +1040,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1026,7 +1066,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1051,7 +1092,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1076,7 +1118,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1101,7 +1144,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1126,7 +1170,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1151,7 +1196,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1176,7 +1222,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1201,7 +1248,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1226,7 +1274,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1251,7 +1300,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1276,7 +1326,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1301,7 +1352,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1326,7 +1378,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1351,7 +1404,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1376,7 +1430,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1401,7 +1456,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1426,7 +1482,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1451,7 +1508,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1476,7 +1534,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1501,12 +1560,13 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         }
       ],
       "itemCount": 60,
       "utilization": 66.66666666666666,
-      "type": "full"
+      "type": "partial"
     },
     {
       "id": 2,
@@ -1534,7 +1594,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1559,7 +1620,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1584,7 +1646,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1609,7 +1672,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1634,7 +1698,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1659,7 +1724,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1684,7 +1750,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1709,7 +1776,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1734,7 +1802,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1759,7 +1828,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1784,7 +1854,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1809,7 +1880,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1834,7 +1906,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1859,7 +1932,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1884,7 +1958,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1909,7 +1984,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1934,7 +2010,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1959,7 +2036,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -1984,7 +2062,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -2009,7 +2088,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -2034,7 +2114,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -2059,7 +2140,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -2084,7 +2166,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -2109,7 +2192,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -2134,7 +2218,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -2159,7 +2244,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -2184,7 +2270,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -2209,7 +2296,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -2234,7 +2322,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -2259,7 +2348,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -2284,7 +2374,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -2309,7 +2400,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -2334,7 +2426,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -2359,7 +2452,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -2384,7 +2478,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -2409,7 +2504,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -2434,7 +2530,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -2459,7 +2556,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -2484,7 +2582,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -2509,12 +2608,13 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         }
       ],
       "itemCount": 40,
       "utilization": 44.44444444444444,
-      "type": "partial"
+      "type": "full"
     }
   ],
   "totalItems": 100,
@@ -2525,13 +2625,8 @@
     "width": 2500,
     "height": 2700
   },
-  "errors": [],
   "actualUsedVolume": 120000000000,
-  "packedBoxDimensions": {
-    "length": 1000,
-    "width": 1200,
-    "height": 1000
-  },
+  "optimizationsAvailable": [],
   "totalPallets": 0,
   "totalLots": 0
 }

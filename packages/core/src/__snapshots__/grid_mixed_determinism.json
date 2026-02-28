@@ -26,7 +26,8 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
@@ -51,19 +52,12 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
-        }
-      ],
-      "itemCount": 2,
-      "utilization": 6.024835747578041,
-      "type": "partial"
-    },
-    {
-      "id": 2,
-      "items": [
+          },
+          "isPalletBase": false
+        },
         {
           "position": [
-            270,
+            1270,
             270,
             270
           ],
@@ -84,11 +78,12 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
-            270,
+            1270,
             270,
             770
           ],
@@ -109,11 +104,12 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
-            270,
+            1270,
             270,
             1270
           ],
@@ -134,11 +130,12 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
-            270,
+            1270,
             270,
             1770
           ],
@@ -159,11 +156,12 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
-            270,
+            1270,
             770,
             270
           ],
@@ -184,19 +182,12 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
-        }
-      ],
-      "itemCount": 5,
-      "utilization": 1.8827611711181378,
-      "type": "partial"
-    },
-    {
-      "id": 3,
-      "items": [
+          },
+          "isPalletBase": false
+        },
         {
           "position": [
-            145,
+            1645,
             145,
             145
           ],
@@ -217,11 +208,12 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
-            145,
+            1645,
             145,
             395
           ],
@@ -242,11 +234,12 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
-            145,
+            1645,
             145,
             645
           ],
@@ -267,11 +260,12 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
-            145,
+            1645,
             145,
             895
           ],
@@ -292,11 +286,12 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
-            145,
+            1645,
             145,
             1145
           ],
@@ -317,11 +312,12 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
-            145,
+            1645,
             145,
             1395
           ],
@@ -342,11 +338,12 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
-            145,
+            1645,
             145,
             1645
           ],
@@ -367,11 +364,12 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
-            145,
+            1645,
             145,
             1895
           ],
@@ -392,11 +390,12 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
-            145,
+            1645,
             145,
             2145
           ],
@@ -417,11 +416,12 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         },
         {
           "position": [
-            145,
+            1645,
             395,
             145
           ],
@@ -442,21 +442,25 @@
             "cols": 1,
             "rows": 1,
             "layers": 1
-          }
+          },
+          "isPalletBase": false
         }
       ],
-      "itemCount": 10,
-      "utilization": 0.47069029277953445,
-      "type": "partial"
+      "itemCount": 17,
+      "utilization": 8.378287211475714,
+      "type": "full"
     }
   ],
   "totalItems": 17,
-  "totalContainers": 3,
+  "totalContainers": 1,
   "unpackedItems": 0,
   "containerDimensions": {
     "length": 5898,
     "width": 2352,
     "height": 2393
   },
-  "actualUsedVolume": 2781250000
+  "actualUsedVolume": 2781250000,
+  "optimizationsAvailable": [],
+  "totalPallets": 0,
+  "totalLots": 0
 }

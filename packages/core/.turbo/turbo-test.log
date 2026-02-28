@@ -2,7 +2,6 @@
 > @stuffing-calc/core@0.0.1 test
 > npx tsx src/test_packGridCore_verification.ts && npx tsx src/test_packGridRegression.ts && npx tsx src/test_orientationSelector.ts && npx tsx src/test_mixedDeterminism.ts && npx tsx src/test_single_material_guard.ts && npx tsx src/test_quantity_governor.ts && npx tsx src/test_sequential_mixed.ts && npx tsx src/test_smart_stack.ts
 
-npm warn exec The following package was not found and will be installed: tsx@4.21.0
 
 node:internal/modules/run_main:107
     triggerUncaughtException(
@@ -12,10 +11,10 @@ Error [ERR_MODULE_NOT_FOUND]: Cannot find module 'E:\Antigravity\Stuffing Calcul
     at moduleResolve (node:internal/modules/esm/resolve:864:10)
     at defaultResolve (node:internal/modules/esm/resolve:990:11)
     at nextResolve (node:internal/modules/esm/hooks:785:28)
-    at resolveBase (file:///C:/Users/Emergence/npm-cache/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1771199252559:2:3744)
-    at resolveDirectory (file:///C:/Users/Emergence/npm-cache/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1771199252559:2:4243)
-    at resolveTsPaths (file:///C:/Users/Emergence/npm-cache/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1771199252559:2:4984)
-    at resolve (file:///C:/Users/Emergence/npm-cache/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1771199252559:2:5361)
+    at resolveBase (file:///C:/Users/Emergence/npm-cache/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1771895412429:2:3744)
+    at resolveDirectory (file:///C:/Users/Emergence/npm-cache/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1771895412429:2:4243)
+    at resolveTsPaths (file:///C:/Users/Emergence/npm-cache/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1771895412429:2:4984)
+    at resolve (file:///C:/Users/Emergence/npm-cache/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1771895412429:2:5361)
     at nextResolve (node:internal/modules/esm/hooks:785:28)
     at AsyncLoaderHooksOnLoaderHookWorker.resolve (node:internal/modules/esm/hooks:271:30) {
   code: 'ERR_MODULE_NOT_FOUND',
