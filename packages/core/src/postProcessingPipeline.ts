@@ -247,10 +247,11 @@ export function runPostProcessingPipeline(
                     itemsAddedInThisLoad += placedCount;
                     volumeAddedInThisLoad += placedVolume;
                     currentLoadPackedCount += placedCount;
+                }
 
-                    if (fullMixResult.virtualContainers) {
-                        result.virtualContainers!.push(...fullMixResult.virtualContainers);
-                    }
+                // ALWAYS export VCs even if no items were placed
+                if (fullMixResult.virtualContainers) {
+                    result.virtualContainers!.push(...fullMixResult.virtualContainers);
                 }
             }
         }

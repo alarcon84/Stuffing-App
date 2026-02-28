@@ -383,6 +383,13 @@ export function runFullMixPass(
 
     result.remainingQuantity = effectiveRemaining;
 
+    // Export the remaining VCs so the UI can render the partial spaces
+    if (globalVCQueue.length > 0) {
+        // Filter to only those belonging to this load
+        const finalVCs = globalVCQueue.filter(vc => vc.realContainerId === load.id);
+        result.virtualContainers = finalVCs;
+    }
+
     const finalPassVol = result.placements.reduce((s, p) =>
         s + p.dimensions.length * p.dimensions.width * p.dimensions.height, 0);
     console.log(`[FULL-MIX] Mat${material.id} placed ${result.placedCount} items in ${iterations} iters. ` +

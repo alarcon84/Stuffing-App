@@ -186,6 +186,9 @@ export function runTopUpPass(
             effectiveRegionLimit
         );
 
+        // ALWAYS export the virtual container, so the UI can draw the empty top space
+        usedVirtualContainers.push(virtualContainer);
+
         if (result.placements.length > 0) {
             // Map back and Apply Locking
             const validPlacements: PlacedItem[] = [];
@@ -225,7 +228,6 @@ export function runTopUpPass(
             currentTotalPacked += placedCount;
 
             console.log(`[TOP_UP] Region Y=${region.height.toFixed(0)}, L=${regionLength.toFixed(0)}: Placed ${placedCount} (Valid/Supported)`);
-            usedVirtualContainers.push(virtualContainer);
         }
     }
 
