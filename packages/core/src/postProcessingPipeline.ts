@@ -108,17 +108,19 @@ export function runPostProcessingPipeline(
 
     const isSequential = packingMode === 'SEQUENTIAL';
 
-    // --- GLOBAL PACKED COUNT (for stage-driven remaining calculation) ---
-    // In stage-driven mode, we compute remaining from actual loads instead of
-    // accumulating totalPackedSoFar across loads, which was unreliable.
-    const packedGlobalAtStart = isStageDriven
-        ? initialLoads
-            .flatMap(l => l.items)
-            .filter(i => i.materialId === material.id)
-            .reduce((s, i) => s + (i.itemCount || 1), 0)
-        : 0;
-
-    let totalPackedSoFar = isStageDriven ? packedGlobalAtStart : 0;
+    // --- REMAINING QUOTA TRACKING ---
+    // Always start at 0 and let the per-load loop accumulate `currentLoadPackedCount`
+    // into totalPackedSoFar. This correctly models:
+    //   remaining = material.quantity - (all items seen so far across loads)
+    //
+    // BUG FIX (v0.1.8 stage-driven): we previously initialized totalPackedSoFar to
+    // packedGlobalAtStart in stage-driven mode, which meant that when the first load
+    // contributed its items via `currentLoadPackedCount`, those items were counted
+    // TWICE (once in the init value, once via accumulation). Result: remaining was
+    // always negative, so TopUp and FullMix never placed a single item.
+    //
+    // The per-load accumulation at the bottom of the loop is sufficient.
+    let totalPackedSoFar = 0;
 
     for (let i = 0; i < initialLoads.length; i++) {
         const load = initialLoads[i];
