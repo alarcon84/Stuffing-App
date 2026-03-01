@@ -81,8 +81,7 @@ function packStageDriven(
                 packingMode,
                 fullMixRotations,
                 mIdx,               // materialIndex — drives yRangeFilter in Sequential
-                stageVCQueue,       // globalVCQueue
-                true                // isStageDriven — prevents double-counting trim
+                stageVCQueue        // globalVCQueue
             );
 
             currentLoads = pipelineResult.loads;
