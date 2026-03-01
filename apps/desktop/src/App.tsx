@@ -460,6 +460,17 @@ function App() {
                         matMap.set(mid, (matMap.get(mid) || 0) + count);
                       });
 
+                      // Inject empty VCs so they appear in the UI list and can be highlighted
+                      if (packingResult.virtualContainers) {
+                        packingResult.virtualContainers
+                          .filter(vc => vc.realContainerId === load.id)
+                          .forEach(vc => {
+                            if (!itemsByVc.has(vc.id)) {
+                              itemsByVc.set(vc.id, new Map<number, number>());
+                            }
+                          });
+                      }
+
                       return (
                         <div key={load.id} className="bg-[#2C2C2C] rounded-lg p-2 border border-[#444]">
                           <div className="flex justify-between items-center mb-1">
@@ -469,33 +480,53 @@ function App() {
                               <span className={`text-xs font-semibold ${load.utilization > 85 ? 'text-green-400' : 'text-blue-400'}`}>{load.utilization.toFixed(1)}% Util</span>
                             </div>
                           </div>
-                          {Array.from(itemsByVc.entries()).map(([vcId, matMap]) => (
-                            <div key={vcId} className="mb-1">
-                              <div
-                                className={`text-[10px] font-semibold px-2 py-1 rounded mb-1 truncate cursor-pointer transition-all duration-200 border ${activeVcId === vcId
-                                  ? 'bg-blue-600/30 border-blue-500 text-blue-300 shadow-sm scale-[1.02]'
-                                  : 'bg-[#1E1E1E] border-[#444] text-[#AAA] hover:bg-[#333] hover:border-[#555] hover:text-[#CCC]'
-                                  }`}
-                                title={vcId !== 'Main Loading Area' ? 'Click to persistent highlight in 3D View' : undefined}
-                                onMouseEnter={() => vcId !== 'Main Loading Area' && setHoveredVcId(vcId)}
-                                onMouseLeave={() => setHoveredVcId(null)}
-                                onClick={() => vcId !== 'Main Loading Area' && setClickedVcId(clickedVcId === vcId ? null : vcId)}
-                              >
-                                {vcId.replace('vc_', 'Space: ').replace(/_/g, ' ')}
-                              </div>
-                              {
-                                Array.from(matMap.entries()).map(([mid, count]) => {
-                                  const mat = currentMaterials.find(m => m.id === mid);
-                                  return (
-                                    <div key={`${vcId}-${mid}`} className="flex justify-between text-[10px] text-gray-400 pl-2">
-                                      <span style={{ color: mat?.box.color }}>Mat {mid}:</span>
-                                      <span className="text-[#E0E0E0]">{count} items</span>
-                                    </div>
-                                  );
-                                })
+                          {Array.from(itemsByVc.entries()).map(([vcId, matMap]) => {
+                            let displayName = vcId;
+                            if (vcId !== 'Main Loading Area' && packingResult.virtualContainers) {
+                              const vcIndex = packingResult.virtualContainers.findIndex(v => v.id === vcId);
+                              if (vcIndex !== -1) {
+                                const typeMatch = vcId.match(/^vc_([a-z]+)_/);
+                                const typeStr = typeMatch ? typeMatch[1] : 'space';
+                                displayName = `VC ${vcIndex + 1} (${typeStr})`;
+                              } else {
+                                displayName = vcId.replace('vc_', 'Space: ').replace(/_/g, ' ');
                               }
-                            </div>
-                          ))}
+                            }
+
+                            return (
+                              <div key={vcId} className="mb-1">
+                                <div
+                                  className={`text-[10px] font-semibold px-2 py-1 rounded mb-1 truncate cursor-pointer transition-all duration-200 border ${activeVcId === vcId
+                                    ? 'bg-blue-600/30 border-blue-500 text-blue-300 shadow-sm scale-[1.02]'
+                                    : 'bg-[#1E1E1E] border-[#444] text-[#AAA] hover:bg-[#333] hover:border-[#555] hover:text-[#CCC]'
+                                    }`}
+                                  title={vcId !== 'Main Loading Area' ? 'Click to persistent highlight in 3D View' : undefined}
+                                  onMouseEnter={() => vcId !== 'Main Loading Area' && setHoveredVcId(vcId)}
+                                  onMouseLeave={() => setHoveredVcId(null)}
+                                  onClick={() => vcId !== 'Main Loading Area' && setClickedVcId(clickedVcId === vcId ? null : vcId)}
+                                >
+                                  {displayName}
+                                </div>
+                                {
+                                  Array.from(matMap.entries()).length === 0 ? (
+                                    <div className="flex justify-between text-[10px] text-gray-500 pl-2">
+                                      <span className="italic">Empty Space</span>
+                                    </div>
+                                  ) : (
+                                    Array.from(matMap.entries()).map(([mid, count]) => {
+                                      const mat = currentMaterials.find(m => m.id === mid);
+                                      return (
+                                        <div key={`${vcId}-${mid}`} className="flex justify-between text-[10px] text-gray-400 pl-2">
+                                          <span style={{ color: mat?.box.color }}>Mat {mid}:</span>
+                                          <span className="text-[#E0E0E0]">{count} items</span>
+                                        </div>
+                                      );
+                                    })
+                                  )
+                                }
+                              </div>
+                            );
+                          })}
                         </div>
                       );
                     })}

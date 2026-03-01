@@ -3,3 +3,8 @@ dist/
 dist_*/
 build/
 .env
+release/
+apps/desktop/release/
+apps/desktop/out/
+Session Debug/
+*.png

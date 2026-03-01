@@ -25,7 +25,7 @@
  * GridVolume at a time and knows nothing about materials or mixing.
  */
 
-import { packGridCore, type GridVolume, type GridPlacement } from '../packGridCore';
+import { packGridCore, type GridVolume } from '../packGridCore';
 import { findRemainingSpaces, findTopSurfaces, mapToRealCoordinates, createFrontVC, createSideVC, createTopVC, type VirtualContainer } from '../virtualContainer';
 import { hasPhysicalSupport } from '../utils';
 
@@ -66,58 +66,6 @@ function doesOverlap3D(candidate: PlacedItem, existingItems: PlacedItem[]): bool
     return false;
 }
 
-function findBestMaterialForSpace(
-    vc: VirtualContainer,
-    allMaterials: Material[],
-    load: ContainerLoad,
-    fullMixRotations: import('../types').FullMixRotations | undefined,
-    allLoads: ContainerLoad[]
-): { bestMaterial: Material | null, bestPlacements: GridPlacement[], bestOrientation: Dimensions | null } {
-    let bestMaterial: Material | null = null;
-    let bestPlacements: GridPlacement[] = [];
-    let bestOrientation: Dimensions | null = null;
-    let bestScore = -Infinity;
-
-    for (const mat of allMaterials) {
-        // Calculate remaining globally across all relevant containers
-        const loadsToUse = allLoads.length > 0 ? allLoads : [load];
-        const totalPacked = loadsToUse.flatMap(l => l.items).filter(i => i.materialId === mat.id).reduce((sum, i) => sum + (i.itemCount || 1), 0);
-        const remaining = mat.quantity - totalPacked;
-
-        if (remaining <= 0) continue;
-
-        const boxDims = mat.box.dimensions;
-        const allowed = fullMixRotations || { x: true, y: true, z: true };
-        const orientations = generateOrientations(boxDims, allowed);
-
-        for (const orient of orientations) {
-            if (orient.length > vc.length || orient.width > vc.width || orient.height > vc.height) {
-                continue;
-            }
-
-            const volume: GridVolume = {
-                origin: { x: 0, y: 0, z: 0 },
-                bounds: { length: vc.length, width: vc.width, height: vc.height }
-            };
-
-            const placements = packGridCore(volume, orient);
-            const fitCount = Math.min(placements.length, remaining);
-
-            if (fitCount > 0) {
-                const matVol = orient.length * orient.width * orient.height;
-                const score = fitCount * matVol; // prioritize volume fill
-
-                if (score > bestScore) {
-                    bestScore = score;
-                    bestPlacements = placements.slice(0, fitCount);
-                    bestOrientation = orient;
-                    bestMaterial = mat;
-                }
-            }
-        }
-    }
-    return { bestMaterial, bestPlacements, bestOrientation };
-}
 
 export function runFullMixPass(
     material: Material,
@@ -129,11 +77,8 @@ export function runFullMixPass(
     excludeTop: boolean = false,
     fullMixRotations?: import('../types').FullMixRotations,
     materialIndex: number = 0,
-    yRangeFilter?: { min: number; max: number },
-    packingMode: import('../types').PackingMode = 'SEQUENTIAL',
-    allMaterials?: Material[],
-    globalVCQueue: VirtualContainer[] = [],
-    allLoads: ContainerLoad[] = []
+    strictMaterialIsolation?: boolean,
+    globalVCQueue: VirtualContainer[] = []
 ): FullMixResult {
     const result: FullMixResult = {
         placements: [],
@@ -175,6 +120,27 @@ export function runFullMixPass(
 
     let iterations = 0;
 
+    // Strict Isolation: Compute the minimum X boundary of THIS material
+    let minX = Infinity;
+    if (strictMaterialIsolation) {
+        const myItems = load.items.filter(i => i.materialId === material.id);
+        if (myItems.length === 0) {
+            // Material hasn't packed anything in this container yet!
+            // Its boundary should be the absolute highest X coordinate of ALL items packed by previous materials!
+            let prevMaxX = 0;
+            for (const item of load.items) {
+                const ix = item.position[0] + item.dimensions.length / 2;
+                if (ix > prevMaxX) prevMaxX = ix;
+            }
+            minX = prevMaxX;
+        } else {
+            for (const item of myItems) {
+                const ix1 = item.position[0] - item.dimensions.length / 2;
+                if (ix1 < minX) minX = ix1;
+            }
+        }
+    }
+
     // GREEDY SINGLE-BEST-SPACE LOOP
     while (effectiveRemaining > 0 && iterations < MAX_ITERATIONS) {
         iterations++;
@@ -186,21 +152,21 @@ export function runFullMixPass(
             break; // Already at ceiling
         }
 
-        // 1. Recompute ALL virtual containers from CURRENT load state IF QUEUE IS EMPTY
-        if (globalVCQueue.length === 0) {
-            const vcsBasic = findRemainingSpaces(load, containerDims, margins, excludeTop, yRangeFilter);
+        // 1. Recompute ALL virtual containers from CURRENT load state IF QUEUE IS EMPTY FOR THIS LOAD
+        let virtualContainers = globalVCQueue.filter(vc => vc.realContainerId === load.id);
+
+        if (virtualContainers.length === 0) {
+            // yRangeFilter has been removed from these calls as strictMaterialIsolation handles it at the VC selection level
+            const vcsBasic = findRemainingSpaces(load, containerDims, margins, excludeTop);
 
             let vcsSkyline: VirtualContainer[] = [];
             if (!excludeTop) {
-                vcsSkyline = findTopSurfaces(load, containerDims, margins, yRangeFilter);
+                vcsSkyline = findTopSurfaces(load, containerDims, margins);
             }
 
             globalVCQueue.push(...vcsBasic, ...vcsSkyline);
+            virtualContainers = globalVCQueue.filter(vc => vc.realContainerId === load.id);
         }
-
-        // 1.5. Instead of recalculating, we pull the available spaces from the global queue
-        // Filter elements belonging to this load
-        const virtualContainers = globalVCQueue.filter(vc => vc.realContainerId === load.id);
 
         if (virtualContainers.length === 0) {
             break; // No more space
@@ -213,13 +179,14 @@ export function runFullMixPass(
         // is disabled. Smart behavior (filling prior VCs) is achieved by the stage
         // driver passing accumulated currentLoads as initialLoads — not by picking a
         // different material inside this pass.
-        let bestPlacements: GridPlacement[] = [];
+        let bestValidPlacements: PlacedItem[] = [];
         let bestOrientation: Dimensions | null = null;
         let bestVC: VirtualContainer | null = null;
         const selectedMaterial: Material = material; // Always current material
 
+        const allExistingItems = [...load.items];
+
         for (const vc of virtualContainers) {
-            // Fixed Material Choice — strict input order regardless of packingMode
             for (const orient of orientations) {
                 if (orient.length > vc.length || orient.width > vc.width || orient.height > vc.height) {
                     continue;
@@ -231,76 +198,86 @@ export function runFullMixPass(
                 };
 
                 const placements = packGridCore(volume, orient);
-                const usable = Math.min(placements.length, effectiveRemaining);
 
-                if (usable > bestPlacements.length) {
-                    bestPlacements = placements.slice(0, usable);
+                if (placements.length === 0) continue;
+
+                // Test these placements physically to ensure they actually fit and aren't floating
+                const validPlacedNow: PlacedItem[] = [];
+                const tempLoad: ContainerLoad = { ...load, items: [...allExistingItems] };
+
+                for (let k = 0; k < placements.length; k++) {
+                    if (validPlacedNow.length >= effectiveRemaining) break;
+
+                    const p = placements[k];
+                    const placedPos = kernelToPlacedPosition(p.position);
+
+                    const virtualPlacement: PlacedItem = {
+                        position: [placedPos[0], placedPos[1], placedPos[2]],
+                        rotation: [0, 0, 0],
+                        dimensions: orient,
+                        type: 'box',
+                        itemCount: 1,
+                        materialId: selectedMaterial.id,
+                        locked: false,
+                        source: 'FULL_MIX',
+                        vcId: vc.id
+                    };
+
+                    const realItem = mapToRealCoordinates(virtualPlacement, vc);
+
+                    // VALIDATE: Strict Material Isolation check
+                    if (strictMaterialIsolation) {
+                        const itemMinX = realItem.position[0] - realItem.dimensions.length / 2;
+                        // Tolerance of 10mm to avoid floating point strictness throwing out valid sequence edge items
+                        if (itemMinX < minX - 10) {
+                            continue;
+                        }
+                    }
+
+                    // VALIDATE: Physical support check
+                    if (!hasPhysicalSupport(realItem, tempLoad, margins.height ?? 20)) {
+                        continue;
+                    }
+
+                    // VALIDATE: 3D overlap check (AABB collision)
+                    if (doesOverlap3D(realItem, [...allExistingItems, ...validPlacedNow])) {
+                        continue;
+                    }
+
+                    // VALIDATE: Volume ceiling check per-item
+                    const itemVol = realItem.dimensions.length * realItem.dimensions.width * realItem.dimensions.height;
+                    const projectedVol = currentLoadVol +
+                        validPlacedNow.reduce((s, pi) => s + pi.dimensions.length * pi.dimensions.width * pi.dimensions.height, 0) + itemVol;
+                    if (projectedVol > containerVolume * VOLUME_CEILING) {
+                        break; // Stop placing this orientation — would exceed ceiling
+                    }
+
+                    validPlacedNow.push(realItem);
+                    tempLoad.items.push(realItem);
+                }
+
+                if (validPlacedNow.length > bestValidPlacements.length) {
+                    bestValidPlacements = validPlacedNow;
                     bestOrientation = orient;
                     bestVC = vc;
                 }
             }
         }
 
-        // 3. Place items from the single best (VC, orientation)
-        if (bestPlacements.length === 0 || !bestOrientation || !bestVC) {
-            break; // No viable placement found
+        // 3. Place items from the single BEST VALID (VC, orientation)
+        if (bestValidPlacements.length === 0 || !bestOrientation || !bestVC) {
+            break; // No viable placement found in any VC
         }
 
-        const toTake = Math.min(bestPlacements.length, effectiveRemaining);
-        const placedNow: PlacedItem[] = [];
-
-        // All items currently in the load (base + previously placed in this pass)
-        const allExistingItems = [...load.items];
-
-        for (let k = 0; k < toTake; k++) {
-            const p = bestPlacements[k];
-            const placedPos = kernelToPlacedPosition(p.position);
-
-            const virtualPlacement: PlacedItem = {
-                position: [placedPos[0], placedPos[1], placedPos[2]],
-                rotation: [0, 0, 0],
-                dimensions: bestOrientation!,
-                type: 'box',
-                itemCount: 1,
-                materialId: selectedMaterial.id,
-                locked: false,
-                source: 'FULL_MIX',
-                vcId: bestVC!.id
-            };
-
-            const realItem = mapToRealCoordinates(virtualPlacement, bestVC!);
-
-            // VALIDATE: Physical support check
-            const tempLoad: ContainerLoad = {
-                ...load,
-                items: [...allExistingItems, ...placedNow]
-            };
-
-            if (!hasPhysicalSupport(realItem, tempLoad, margins.height ?? 20)) {
-                continue; // Skip unsupported items
-            }
-
-            // VALIDATE: 3D overlap check (AABB collision)
-            if (doesOverlap3D(realItem, [...allExistingItems, ...placedNow])) {
-                continue; // Skip overlapping items
-            }
-
-            // VALIDATE: Volume ceiling check per-item
-            const itemVol = realItem.dimensions.length * realItem.dimensions.width * realItem.dimensions.height;
-            const projectedVol = currentLoadVol + result.consumedVolume +
-                placedNow.reduce((s, pi) => s + pi.dimensions.length * pi.dimensions.width * pi.dimensions.height, 0) + itemVol;
-            if (projectedVol > containerVolume * VOLUME_CEILING) {
-                break; // Stop placing — would exceed ceiling
-            }
-
-            placedNow.push(realItem);
-        }
+        const placedNow = bestValidPlacements;
 
         if (placedNow.length === 0) {
             break; // No progress — all items failed validation
         }
 
         // 4. Commit placements and IMMEDIATELY update load
+        console.log(`[FULL-MIX PLACEMENT] VC: ${bestVC?.id}, Dims: ${bestOrientation?.length}x${bestOrientation?.width}x${bestOrientation?.height}, Count: ${placedNow.length}`);
+
         result.placements.push(...placedNow);
         result.placedCount += placedNow.length;
         result.consumedVolume += placedNow.length *
@@ -346,7 +323,9 @@ export function runFullMixPass(
 
             if (frontVC) globalVCQueue.push(frontVC);
             if (sideVC) globalVCQueue.push(sideVC);
-            if (topVC) globalVCQueue.push(topVC);
+            if (topVC) {
+                globalVCQueue.push(topVC);
+            }
         }
 
         // 5. Update state for NEXT iteration
@@ -360,24 +339,27 @@ export function runFullMixPass(
     }
 
     // SAFETY GUARD — verify total volume doesn't exceed container (hard ceiling)
-    const baseVolume = load.items.reduce((s, i) =>
+    // In the while loop, `load.items` is updated to include `placedNow` at the end of every iteration.
+    // Thus `load.items` already contains all items from `result.placements`.
+    // We compute the true total volume by summing solely over `load.items`.
+    let totalVolume = load.items.reduce((s, i) =>
         s + i.dimensions.length * i.dimensions.width * i.dimensions.height, 0);
 
-    const passVolume = result.placements.reduce((s, p) =>
-        s + p.dimensions.length * p.dimensions.width * p.dimensions.height, 0);
-
-    const totalVolume = baseVolume + passVolume;
-
     if (totalVolume > containerVolume * VOLUME_CEILING) {
-        console.warn(`[FULL-MIX] SAFETY TRIM: Volume ${totalVolume.toFixed(0)} exceeds ${(VOLUME_CEILING * 100).toFixed(1)}% ceiling by ${(totalVolume / containerVolume * 100 - VOLUME_CEILING * 100).toFixed(1)}%`);
+        console.warn(`[FULL-MIX] SAFETY TRIM: Volume ${totalVolume.toFixed(0)} exceeds ${(VOLUME_CEILING * 100).toFixed(1)}% ceiling by ${((totalVolume / containerVolume * 100) - (VOLUME_CEILING * 100)).toFixed(1)}%`);
 
         // Trim excess from the end
-        while (result.placements.length > 0 &&
-            baseVolume + result.placements.reduce((s, p) => s + p.dimensions.length * p.dimensions.width * p.dimensions.height, 0) > containerVolume * VOLUME_CEILING) {
+        while (result.placements.length > 0 && totalVolume > containerVolume * VOLUME_CEILING) {
             const removed = result.placements.pop()!;
             result.placedCount--;
-            result.consumedVolume -= removed.dimensions.length * removed.dimensions.width * removed.dimensions.height;
+            const itemVol = removed.dimensions.length * removed.dimensions.width * removed.dimensions.height;
+            result.consumedVolume -= itemVol;
+            totalVolume -= itemVol; // Adjust total volume correctly for next iteration
             effectiveRemaining++;
+
+            // Also keep load.items synchronized with trim if needed for external logic 
+            // (though load is a local object here, it keeps totalVolume mathematically sound)
+            load.items.pop();
         }
     }
 
@@ -394,8 +376,8 @@ export function runFullMixPass(
         s + p.dimensions.length * p.dimensions.width * p.dimensions.height, 0);
     console.log(`[FULL-MIX] Mat${material.id} placed ${result.placedCount} items in ${iterations} iters. ` +
         `Volume: ${finalPassVol.toFixed(0)}/${containerVolume.toFixed(0)} ` +
-        `(${((baseVolume + finalPassVol) / containerVolume * 100).toFixed(1)}% total)` +
-        (yRangeFilter ? ` [Y-range: ${yRangeFilter.min.toFixed(0)}–${yRangeFilter.max.toFixed(0)}]` : ''));
+        `(${((totalVolume) / containerVolume * 100).toFixed(1)}% total)` +
+        (strictMaterialIsolation ? ` [Strict Isolated minX=${minX.toFixed(0)}]` : ''));
 
     return result;
 }

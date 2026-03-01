@@ -81,9 +81,7 @@ function packStageDriven(
                 packingMode,
                 fullMixRotations,
                 mIdx,           // materialIndex — drives yRangeFilter in Sequential
-                activeMaterials,
-                stageVCQueue,
-                true            // isStageDriven — disables compaction in pipeline
+                stageVCQueue
             );
 
             currentLoads = pipelineResult.loads;
@@ -211,9 +209,7 @@ export const calculatePacking = (
                     packingMode,
                     fullMixRotations,
                     mIdx,
-                    activeMaterials,
-                    globalVCQueue,
-                    false // isStageDriven = false → full legacy behavior
+                    globalVCQueue
                 );
 
                 currentLoads = pipelineResult.loads;
