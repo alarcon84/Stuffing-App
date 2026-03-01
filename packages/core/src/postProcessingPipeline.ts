@@ -82,7 +82,6 @@ export function runPostProcessingPipeline(
     packingMode: import('./types').PackingMode,
     fullMixRotations?: import('./types').FullMixRotations,
     materialIndex: number = 0,
-    allMaterials?: Material[],
     globalVCQueue: import('./virtualContainer').VirtualContainer[] = [],
     isStageDriven: boolean = false
 ): PipelineResult {
@@ -223,11 +222,8 @@ export function runPostProcessingPipeline(
                     topSpaceOccupied,
                     fullMixRotations,
                     materialIndex,
-                    yFilter,
-                    packingMode,
-                    allMaterials,
-                    globalVCQueue,
-                    initialLoads.map((l, lIdx) => lIdx === i ? updatedLoad : l)
+                    isSequential && materialIndex > 0,  // strictMaterialIsolation
+                    globalVCQueue
                 );
 
                 console.log("Material:", material.id, "Visible VC count:", globalVCQueue.length);

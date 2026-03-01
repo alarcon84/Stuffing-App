@@ -80,8 +80,9 @@ function packStageDriven(
                 enableFullMix,
                 packingMode,
                 fullMixRotations,
-                mIdx,           // materialIndex — drives yRangeFilter in Sequential
-                stageVCQueue
+                mIdx,               // materialIndex — drives yRangeFilter in Sequential
+                stageVCQueue,       // globalVCQueue
+                true                // isStageDriven — prevents double-counting trim
             );
 
             currentLoads = pipelineResult.loads;
@@ -209,7 +210,7 @@ export const calculatePacking = (
                     packingMode,
                     fullMixRotations,
                     mIdx,
-                    globalVCQueue
+                    globalVCQueue       // globalVCQueue - isStageDriven defaults false here (non-stage-driven path)
                 );
 
                 currentLoads = pipelineResult.loads;
